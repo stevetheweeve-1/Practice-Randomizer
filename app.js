@@ -21,6 +21,7 @@ const soundToggle = document.querySelector("#sound-toggle");
 const beatLight = document.querySelector("#beat-light");
 const bpmLabel = document.querySelector("#bpm-label");
 const stopButton = document.querySelector("#stop-button");
+const endSessionButton = document.querySelector("#end-session-button");
 const startSessionButton = document.querySelector("#start-session-button");
 const pdfCountdown = document.querySelector("#pdf-countdown");
 const durationForm = document.querySelector("#duration-form");
@@ -120,6 +121,7 @@ async function finishSession() {
   stopButton.textContent = "Stop session";
   stopButton.classList.remove("resume");
   stopButton.disabled = true;
+  endSessionButton.hidden = true;
 }
 
 function setRandomTempo() {
@@ -253,6 +255,7 @@ startSessionButton.addEventListener("click", async () => {
   startSessionButton.textContent = "Session running";
   startSessionButton.disabled = true;
   stopButton.disabled = false;
+  endSessionButton.hidden = true;
   if (metronomeEnabled) await enableMetronome();
   showNextPdf();
 });
@@ -271,6 +274,7 @@ stopButton.addEventListener("click", async () => {
     button.disabled = true;
     stopButton.textContent = "Resume session";
     stopButton.classList.add("resume");
+    endSessionButton.hidden = false;
     rotationStatus.textContent = "Session stopped · PDF and metronome are paused";
     pdfCountdown.textContent = "Paused";
     return;
@@ -280,10 +284,12 @@ stopButton.addEventListener("click", async () => {
   button.disabled = false;
   stopButton.textContent = "Stop session";
   stopButton.classList.remove("resume");
+  endSessionButton.hidden = true;
   if (metronomeEnabled) await enableMetronome();
   else startVisualMetronome();
   startCountdown();
 });
+endSessionButton.addEventListener("click", finishSession);
 durationForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const requestedDuration = Number(durationInput.value);

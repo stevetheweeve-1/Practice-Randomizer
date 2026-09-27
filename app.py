@@ -57,6 +57,7 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.send_json(response)
 
     def send_json(self, response):
+
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")

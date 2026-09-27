@@ -4,11 +4,56 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Random PDF</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css?v=layout-bottom-1" />
   </head>
   <body>
     <main>
-      <header>
+      <div class="top-session-control">
+        <div class="session-buttons">
+          <button id="sound-toggle" class="sound-toggle on" type="button">Sound off</button>
+          <button id="start-session-button" class="start-session-button" type="button">Start session</button>
+          <button id="stop-button" class="stop-button" type="button" disabled>Stop session</button>
+          <button id="end-session-button" class="end-session-button" type="button" hidden>End session</button>
+        </div>
+        <p id="pdf-countdown" class="pdf-countdown top-countdown">Session not started</p>
+      </div>
+      <section class="viewer-card" aria-live="polite">
+        <div class="viewer-heading">
+          <div>
+            <p class="label">NOW SHOWING</p>
+            <h2 id="file-name">Session ready</h2>
+          </div>
+          <div class="viewer-actions">
+            <div class="metronome" aria-live="polite">
+              <span id="beat-light" class="beat-light" aria-hidden="true"></span>
+              <span id="bpm-label">Metronome · 60 BPM</span>
+            </div>
+            <button id="another-pdf" type="button" disabled>Next now <span aria-hidden="true">→</span></button>
+          </div>
+        </div>
+        <div id="waiting-state" class="empty-state">
+          <span aria-hidden="true">⌁</span>
+          <h2>Ready to begin</h2>
+          <p>Click <strong>Start session</strong> to display the first PDF.</p>
+        </div>
+        <div id="empty-state" class="empty-state" hidden>
+          <span aria-hidden="true">⌁</span>
+          <h2>No PDFs yet</h2>
+          <p>Put one or more PDF files in the <code>pdfs</code> folder, then try again.</p>
+        </div>
+        <div id="pdf-viewer" class="pdf-viewer" aria-label="Random PDF viewer">
+          <div id="loading" class="loading">Rendering PDF…</div>
+          <canvas id="pdf-canvas" hidden></canvas>
+          <div id="page-controls" class="page-controls" hidden>
+            <button id="previous-page" class="page-button" type="button" aria-label="Previous page">←</button>
+            <span id="page-number"></span>
+            <button id="next-page" class="page-button" type="button" aria-label="Next page">→</button>
+          </div>
+        </div>
+      </section>
+      <p id="collection-count" class="count"></p>
+      <p id="rotation-status" class="count" aria-live="polite"></p>
+      <section class="options-panel">
         <p class="eyebrow">PDF PICKER</p>
         <p class="intro">Pull a surprise PDF from your collection.</p>
         <div class="folder-picker">
@@ -36,51 +81,8 @@
           <button type="submit">Set range</button>
           <span id="tempo-range-status">Inclusive</span>
         </form>
-        <div class="metronome-controls">
-          <button id="sound-toggle" class="sound-toggle on" type="button">Sound off</button>
-          <button id="start-session-button" class="start-session-button" type="button">Start session</button>
-          <button id="stop-button" class="stop-button" type="button" disabled>Stop session</button>
-        </div>
-      </header>
-
-      <section class="viewer-card" aria-live="polite">
-        <div class="viewer-heading">
-          <div>
-            <p class="label">NOW SHOWING</p>
-            <h2 id="file-name">Session ready</h2>
-          </div>
-          <div class="viewer-actions">
-            <div class="metronome" aria-live="polite">
-              <span id="beat-light" class="beat-light" aria-hidden="true"></span>
-              <span id="bpm-label">Metronome · 60 BPM</span>
-            </div>
-            <p id="pdf-countdown" class="pdf-countdown">Session not started</p>
-            <button id="another-pdf" type="button" disabled>Next now <span aria-hidden="true">→</span></button>
-          </div>
-        </div>
-        <div id="waiting-state" class="empty-state">
-          <span aria-hidden="true">⌁</span>
-          <h2>Ready to begin</h2>
-          <p>Click <strong>Start session</strong> to display the first PDF.</p>
-        </div>
-        <div id="empty-state" class="empty-state" hidden>
-          <span aria-hidden="true">⌁</span>
-          <h2>No PDFs yet</h2>
-          <p>Put one or more PDF files in the <code>pdfs</code> folder, then try again.</p>
-        </div>
-        <div id="pdf-viewer" class="pdf-viewer" aria-label="Random PDF viewer">
-          <div id="loading" class="loading">Rendering PDF…</div>
-          <canvas id="pdf-canvas" hidden></canvas>
-          <div id="page-controls" class="page-controls" hidden>
-            <button id="previous-page" class="page-button" type="button" aria-label="Previous page">←</button>
-            <span id="page-number"></span>
-            <button id="next-page" class="page-button" type="button" aria-label="Next page">→</button>
-          </div>
-        </div>
       </section>
-      <p id="collection-count" class="count"></p>
-      <p id="rotation-status" class="count" aria-live="polite"></p>
     </main>
-    <script type="module" src="app.js?v=round-complete-1"></script>
+    <script type="module" src="app.js?v=end-session-2"></script>
   </body>
 </html>
