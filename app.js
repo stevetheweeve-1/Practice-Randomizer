@@ -269,14 +269,12 @@ stopButton.addEventListener("click", async () => {
     isStopped = true;
     clearTimeout(rotationTimer);
     clearInterval(countdownTimer);
-    clearInterval(visualMetronomeTimer);
-    await audioContext?.suspend();
     button.disabled = true;
     stopButton.textContent = "Resume session";
     stopButton.classList.add("resume");
     endSessionButton.hidden = false;
-    rotationStatus.textContent = "Session stopped · PDF and metronome are paused";
-    pdfCountdown.textContent = "Paused";
+    rotationStatus.textContent = "PDF rotation paused · Metronome continues";
+    pdfCountdown.textContent = "PDF paused";
     return;
   }
 
@@ -285,8 +283,6 @@ stopButton.addEventListener("click", async () => {
   stopButton.textContent = "Stop session";
   stopButton.classList.remove("resume");
   endSessionButton.hidden = true;
-  if (metronomeEnabled) await enableMetronome();
-  else startVisualMetronome();
   startCountdown();
 });
 endSessionButton.addEventListener("click", finishSession);
