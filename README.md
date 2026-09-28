@@ -26,3 +26,5 @@ Use **Stop session** to pause both the PDF rotation and metronome. Press **Resum
 Set **Time signature** in `x/y` format (for example, `3/4` or `6/8`). The first beat of each measure is played with a louder, higher click.
 
 Use **BPM range** to set inclusive lower and upper limits (1–300). Each new PDF receives a random integer tempo within those limits.
+
+stephen adding stuff
