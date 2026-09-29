@@ -54,6 +54,60 @@ let beatsPerMeasure = 4;
 let beatInMeasure = 0;
 let minimumBpm = 60;
 let maximumBpm = 120;
+const defaultPracticeSettings = Object.freeze({
+  minimumBpm,
+  maximumBpm,
+  timeSignature: timeSignatureInput.value.trim(),
+});
+
+function parseTimeSignature(value) {
+  const match = typeof value === "string" && value.trim().match(/^(\d+)\/(\d+)$/);
+  const numerator = match && Number(match[1]);
+  const denominator = match && Number(match[2]);
+  const allowedDenominators = [1, 2, 4, 8, 16];
+  if (!numerator || numerator > 32 || !allowedDenominators.includes(denominator)) return null;
+  return { numerator, value: `${numerator}/${denominator}` };
+}
+
+function applyPracticeSettings(settings, source = "the defaults") {
+  const timeSignature = parseTimeSignature(settings?.timeSignature);
+  const minimum = settings?.minBpm;
+  const maximum = settings?.maxBpm;
+  const isValid = Number.isInteger(minimum) && Number.isInteger(maximum)
+    && minimum >= 1 && maximum <= 300 && minimum <= maximum && timeSignature;
+
+  if (!isValid) {
+    minimumBpm = defaultPracticeSettings.minimumBpm;
+    maximumBpm = defaultPracticeSettings.maximumBpm;
+    beatsPerMeasure = parseTimeSignature(defaultPracticeSettings.timeSignature).numerator;
+    minBpmInput.value = minimumBpm;
+    maxBpmInput.value = maximumBpm;
+    timeSignatureInput.value = defaultPracticeSettings.timeSignature;
+    tempoRangeStatus.textContent = "Using default range";
+    timeSignatureStatus.textContent = "Using default time signature";
+    return false;
+  }
+
+  minimumBpm = minimum;
+  maximumBpm = maximum;
+  beatsPerMeasure = timeSignature.numerator;
+  minBpmInput.value = minimum;
+  maxBpmInput.value = maximum;
+  timeSignatureInput.value = timeSignature.value;
+  tempoRangeStatus.textContent = `${minimum}–${maximum} BPM from ${source}`;
+  timeSignatureStatus.textContent = `${timeSignature.value} from ${source}`;
+  return true;
+}
+
+async function loadBundledPracticeSettings() {
+  try {
+    const response = await fetch("/api/practice-settings", { cache: "no-store" });
+    const result = await response.json();
+    applyPracticeSettings(result.settings, "practice-settings.json");
+  } catch {
+    applyPracticeSettings(null);
+  }
+}
 
 function tick() {
   const isAccent = beatInMeasure === 0;
@@ -256,6 +310,7 @@ startSessionButton.addEventListener("click", async () => {
   startSessionButton.disabled = true;
   stopButton.disabled = false;
   endSessionButton.hidden = true;
+  if (!selectedFolderPdfs.length) await loadBundledPracticeSettings();
   if (metronomeEnabled) await enableMetronome();
   showNextPdf();
 });
@@ -297,10 +352,25 @@ durationForm.addEventListener("submit", (event) => {
   startCountdown();
 });
 folderButton.addEventListener("click", () => folderInput.click());
-folderInput.addEventListener("change", () => {
-  selectedFolderPdfs = [...folderInput.files]
+folderInput.addEventListener("change", async () => {
+  const selectedFiles = [...folderInput.files];
+  selectedFolderPdfs = selectedFiles
     .filter((file) => file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"))
     .map((file) => ({ file, name: file.name }));
+
+  const settingsFile = selectedFiles.find((file) => {
+    const pathParts = file.webkitRelativePath.split("/");
+    return file.name === "practice-settings.json" && pathParts.length === 2;
+  });
+  let settings = null;
+  if (settingsFile) {
+    try {
+      settings = JSON.parse(await settingsFile.text());
+    } catch {
+      settings = null;
+    }
+  }
+  applyPracticeSettings(settings, "practice-settings.json");
 
   if (!selectedFolderPdfs.length) {
     folderStatus.textContent = "No PDFs found — using the bundled PDFs";

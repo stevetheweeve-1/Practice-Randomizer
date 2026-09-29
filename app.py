@@ -23,6 +23,9 @@ class AppHandler(SimpleHTTPRequestHandler):
         if urlparse(self.path).path == "/api/pdfs":
             self.send_pdf_list()
             return
+        if urlparse(self.path).path == "/api/practice-settings":
+            self.send_practice_settings()
+            return
         super().do_GET()
 
     def available_pdfs(self):
@@ -55,6 +58,19 @@ class AppHandler(SimpleHTTPRequestHandler):
                 "count": len(pdfs),
             }
         self.send_json(response)
+
+    def send_practice_settings(self):
+        settings_file = PDF_DIRECTORY / "practice-settings.json"
+        if not settings_file.is_file():
+            self.send_json({"settings": None})
+            return
+
+        try:
+            settings = json.loads(settings_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            settings = None
+
+        self.send_json({"settings": settings if isinstance(settings, dict) else None})
 
     def send_json(self, response):
 
