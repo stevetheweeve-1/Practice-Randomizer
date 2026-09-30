@@ -20,6 +20,8 @@ const button = document.querySelector("#another-pdf");
 const soundToggle = document.querySelector("#sound-toggle");
 const beatLight = document.querySelector("#beat-light");
 const bpmLabel = document.querySelector("#bpm-label");
+const dynamicsLabel = document.querySelector("#dynamics-label");
+const dynamicsToggle = document.querySelector("#dynamics-toggle");
 const stopButton = document.querySelector("#stop-button");
 const endSessionButton = document.querySelector("#end-session-button");
 const startSessionButton = document.querySelector("#start-session-button");
@@ -64,12 +66,29 @@ let targetTempo = Number(targetTempoInput.value);
 let tempoMethod = "random";
 let activeTempoMethod = "random";
 let rampTimer;
+let dynamicsEnabled = false;
 const defaultPracticeSettings = Object.freeze({
   minimumBpm,
   maximumBpm,
   timeSignature: timeSignatureInput.value.trim(),
   targetTempo,
 });
+
+const dynamicsChoices = ["Piano (p)", "Mezzo-piano (mp)", "Mezzo-forte (mf)", "Forte (f)", "Crescendo", "Decrescendo"];
+
+function stopDynamicsPractice() {
+  dynamicsLabel.hidden = true;
+}
+
+function startDynamicsPractice() {
+  if (!dynamicsEnabled || !sessionStarted) {
+    dynamicsLabel.hidden = true;
+    return;
+  }
+  const choice = dynamicsChoices[Math.floor(Math.random() * dynamicsChoices.length)];
+  dynamicsLabel.textContent = `Dynamics · ${choice}`;
+  dynamicsLabel.hidden = false;
+}
 
 function parseTimeSignature(value) {
   const match = typeof value === "string" && value.trim().match(/^(\d+)\/(\d+)$/);
@@ -239,6 +258,7 @@ async function completeRound() {
   clearTimeout(rotationTimer);
   clearInterval(countdownTimer);
   clearInterval(rampTimer);
+  stopDynamicsPractice();
   isStopped = true;
   sessionStarted = false;
   playlist = [];
@@ -265,6 +285,7 @@ async function finishSession() {
   clearTimeout(rotationTimer);
   clearInterval(countdownTimer);
   clearInterval(rampTimer);
+  stopDynamicsPractice();
   clearInterval(visualMetronomeTimer);
   await audioContext?.suspend();
   playlist = [];
@@ -392,6 +413,7 @@ async function showNextPdf() {
     documentPdf = await pdfjsLib.getDocument(source).promise;
     await renderPage(1);
     applyTempoForNewPdf();
+    startDynamicsPractice();
     pageControls.hidden = false;
     fileName.textContent = result.name;
     collectionCount.textContent = `${playlist.length} PDF${playlist.length === 1 ? "" : "s"} in your collection · Round position ${playlistIndex + 1} of ${playlist.length}`;
@@ -429,6 +451,12 @@ button.addEventListener("click", showNextPdf);
 soundToggle.addEventListener("click", () => {
   if (metronomeEnabled) return disableMetronome();
   return enableMetronome();
+});
+dynamicsToggle.addEventListener("click", () => {
+  dynamicsEnabled = !dynamicsEnabled;
+  dynamicsToggle.textContent = dynamicsEnabled ? "Dynamics on" : "Dynamics off";
+  dynamicsToggle.classList.toggle("on", dynamicsEnabled);
+  startDynamicsPractice();
 });
 stopButton.addEventListener("click", async () => {
   if (!isStopped) {

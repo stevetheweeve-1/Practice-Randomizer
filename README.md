@@ -48,3 +48,5 @@ All three values are required. `minBpm` and `maxBpm` must be whole numbers from
 use a numerator from 1 to 32 and a denominator of 1, 2, 4, 8, or 16. `targetTempo` is optional and must be a whole number from 1 to 300. If it is omitted, the app uses the value in its Target tempo field (60 BPM by default). The metronome continues at the target BPM after the PDF round completes, until **End session** is selected.
 
 Use **Tempo method** to choose **Random BPM**, **Half target**, or **Build up**. Build up requires a display time of at least 60 seconds. It resets to the low BPM whenever a new PDF appears, then calculates equal 30-second increases that reach the high BPM before the next PDF. Tempo method is chosen in the app and is not read from `practice-settings.json`; it defaults to Random BPM. If the file is absent or invalid, the app uses its normal starting values.
+
+Turn **Dynamics practice** on to display one randomly selected instruction for each PDF: piano, mezzo-piano, mezzo-forte, forte, crescendo, or decrescendo. The instruction remains until the next PDF appears. Dynamics practice defaults to off and is configured only in the app.
