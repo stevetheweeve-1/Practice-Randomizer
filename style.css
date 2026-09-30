@@ -30,6 +30,9 @@ h1 { font-size: clamp(2.8rem, 7vw, 5.8rem); line-height: .94; margin: 0; }
 .tempo-range-form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
 .tempo-range-form input { width: 52px; border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; padding: 7px; }
 .tempo-range-form button { padding: 8px 12px; border-radius: 6px; background: #66745d; font-size: .63rem; }
+.target-tempo-form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
+.target-tempo-form input { width: 52px; border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; padding: 7px; }
+.target-tempo-form button { padding: 8px 12px; border-radius: 6px; background: #66745d; font-size: .63rem; }
 @keyframes beat { 0% { transform: scale(1); background: #9ba89a; } 35% { transform: scale(1.8); background: #e97f48; } 100% { transform: scale(1); background: #9ba89a; } }
 .viewer-card { overflow: hidden; border: 1px solid #9da891; border-radius: 18px; background: #f7f4eb; box-shadow: 8px 9px 0 #bcc7ae; }
 .viewer-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; min-height: 104px; padding: 22px 28px; border-bottom: 1px solid #c8cdbd; }

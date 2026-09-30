@@ -38,11 +38,11 @@ To give one PDF folder its own tempo range and time signature, add a file named
 {
   "minBpm": 72,
   "maxBpm": 108,
-  "timeSignature": "7/8"
+  "timeSignature": "7/8",
+  "targetTempo": 120
 }
 ```
 
 All three values are required. `minBpm` and `maxBpm` must be whole numbers from
 1 to 300, with the minimum no greater than the maximum. The time signature must
-use a numerator from 1 to 32 and a denominator of 1, 2, 4, 8, or 16. If the file
-is absent or invalid, the app uses its normal starting values.
+use a numerator from 1 to 32 and a denominator of 1, 2, 4, 8, or 16. `targetTempo` is optional and must be a whole number from 1 to 300. If it is omitted, the app uses the value in its Target tempo field (60 BPM by default). The metronome continues at the target BPM after the PDF round completes, until **End session** is selected. If the file is absent or invalid, the app uses its normal starting values.
