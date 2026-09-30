@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Random PDF</title>
-    <link rel="stylesheet" href="style.css?v=layout-bottom-1" />
+    <link rel="stylesheet" href="style.css?v=dynamics-1" />
   </head>
   <body>
     <main>
@@ -28,6 +28,7 @@
               <span id="beat-light" class="beat-light" aria-hidden="true"></span>
               <span id="bpm-label">Metronome · 60 BPM</span>
             </div>
+            <span id="dynamics-label" class="dynamics-label" hidden></span>
             <button id="another-pdf" type="button" disabled>Next now <span aria-hidden="true">→</span></button>
           </div>
         </div>
@@ -98,8 +99,12 @@
           <button type="submit">Set method</button>
           <span id="tempo-method-status">Random BPM</span>
         </form>
+        <div class="dynamics-control">
+          <span>Dynamics practice</span>
+          <button id="dynamics-toggle" class="dynamics-toggle" type="button">Dynamics off</button>
+        </div>
       </section>
     </main>
-    <script type="module" src="app.js?v=tempo-method-6"></script>
+    <script type="module" src="app.js?v=dynamics-2"></script>
   </body>
 </html>
