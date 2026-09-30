@@ -36,6 +36,9 @@ const tempoRangeForm = document.querySelector("#tempo-range-form");
 const minBpmInput = document.querySelector("#min-bpm-input");
 const maxBpmInput = document.querySelector("#max-bpm-input");
 const tempoRangeStatus = document.querySelector("#tempo-range-status");
+const targetTempoForm = document.querySelector("#target-tempo-form");
+const targetTempoInput = document.querySelector("#target-tempo-input");
+const targetTempoStatus = document.querySelector("#target-tempo-status");
 let documentPdf;
 let currentPage = 1;
 let playlist = [];
@@ -54,10 +57,12 @@ let beatsPerMeasure = 4;
 let beatInMeasure = 0;
 let minimumBpm = 60;
 let maximumBpm = 120;
+let targetTempo = Number(targetTempoInput.value);
 const defaultPracticeSettings = Object.freeze({
   minimumBpm,
   maximumBpm,
   timeSignature: timeSignatureInput.value.trim(),
+  targetTempo,
 });
 
 function parseTimeSignature(value) {
@@ -85,11 +90,19 @@ function applyPracticeSettings(settings, source = "the defaults") {
     timeSignatureInput.value = defaultPracticeSettings.timeSignature;
     tempoRangeStatus.textContent = "Using default range";
     timeSignatureStatus.textContent = "Using default time signature";
+    targetTempo = defaultPracticeSettings.targetTempo;
+    targetTempoInput.value = targetTempo;
+    targetTempoStatus.textContent = `Default target: ${targetTempo} BPM`;
     return false;
   }
 
   minimumBpm = minimum;
   maximumBpm = maximum;
+  targetTempo = Number.isInteger(settings?.targetTempo) && settings.targetTempo >= 1 && settings.targetTempo <= 300
+    ? settings.targetTempo
+    : defaultPracticeSettings.targetTempo;
+  targetTempoInput.value = targetTempo;
+  targetTempoStatus.textContent = `${targetTempo} BPM from ${source}`;
   beatsPerMeasure = timeSignature.numerator;
   minBpmInput.value = minimum;
   maxBpmInput.value = maximum;
@@ -151,6 +164,35 @@ function startVisualMetronome() {
   beatInMeasure = 0;
   tick();
   visualMetronomeTimer = setInterval(tick, 60000 / currentBpm);
+}
+
+async function completeRound() {
+  if (targetTempo === null) {
+    await finishSession();
+    return;
+  }
+
+  clearTimeout(rotationTimer);
+  clearInterval(countdownTimer);
+  isStopped = true;
+  sessionStarted = false;
+  playlist = [];
+  playlistIndex = 0;
+  viewer.hidden = true;
+  waitingState.hidden = false;
+  emptyState.hidden = true;
+  fileName.textContent = "Round complete";
+  collectionCount.textContent = `Metronome continues at your target tempo of ${targetTempo} BPM.`;
+  rotationStatus.textContent = "Round complete · Select End session to stop the metronome";
+  pdfCountdown.textContent = "Target tempo";
+  button.disabled = true;
+  startSessionButton.textContent = "Session complete";
+  startSessionButton.disabled = true;
+  stopButton.disabled = true;
+  endSessionButton.hidden = false;
+  currentBpm = targetTempo;
+  bpmLabel.textContent = `Metronome · ${currentBpm} BPM`;
+  startVisualMetronome();
 }
 
 async function finishSession() {
@@ -258,7 +300,7 @@ async function showNextPdf() {
   button.firstChild.textContent = "Loading… ";
   try {
     if (playlistIndex >= playlist.length && playlist.length) {
-      await finishSession();
+      await completeRound();
       return;
     }
     if (playlistIndex >= playlist.length) await startNewRound();
@@ -418,6 +460,17 @@ tempoRangeForm.addEventListener("submit", (event) => {
   minimumBpm = minimum;
   maximumBpm = maximum;
   tempoRangeStatus.textContent = `${minimum}–${maximum} BPM, inclusive`;
+});
+targetTempoForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const requestedTarget = Number(targetTempoInput.value);
+  if (!Number.isInteger(requestedTarget) || requestedTarget < 1 || requestedTarget > 300) {
+    targetTempoStatus.textContent = "Use a whole number from 1–300";
+    targetTempoInput.focus();
+    return;
+  }
+  targetTempo = requestedTarget;
+  targetTempoStatus.textContent = `Target: ${targetTempo} BPM`;
 });
 previousPage.addEventListener("click", () => currentPage > 1 && renderPage(currentPage - 1));
 nextPage.addEventListener("click", () => currentPage < documentPdf.numPages && renderPage(currentPage + 1));

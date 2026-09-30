@@ -81,8 +81,15 @@
           <button type="submit">Set range</button>
           <span id="tempo-range-status">Inclusive</span>
         </form>
+        <form id="target-tempo-form" class="target-tempo-form">
+          <label for="target-tempo-input">Target tempo</label>
+          <input id="target-tempo-input" type="number" min="1" max="300" value="60" inputmode="numeric" required aria-label="Target tempo" />
+          <span>BPM</span>
+          <button type="submit">Set target</button>
+          <span id="target-tempo-status">60 BPM</span>
+        </form>
       </section>
     </main>
-    <script type="module" src="app.js?v=practice-settings-1"></script>
+    <script type="module" src="app.js?v=target-tempo-2"></script>
   </body>
 </html>
