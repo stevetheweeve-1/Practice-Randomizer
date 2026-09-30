@@ -19,13 +19,13 @@ Set the number of seconds in **Display each PDF for** and press **Apply** to cha
 
 Use **Choose PDF folder** to select any folder on your computer. Its PDFs become the active rotation for the current browser session; no files are uploaded or copied.
 
-Press **Sound on** once to start the metronome. Press **Sound off** to silence the clicks while keeping the visual beat indicator running. Each displayed PDF receives a random whole-number tempo from 60–120 BPM. Browsers require this one interaction before allowing audio playback.
+Press **Sound on** once to start the metronome. Press **Sound off** to silence the clicks while keeping the visual beat indicator running. Browsers require this one interaction before allowing audio playback.
 
 Use **Stop session** to pause PDF rotation while the metronome continues. Press **Resume session** to continue from the displayed PDF.
 
 Set **Time signature** in `x/y` format (for example, `3/4` or `6/8`). The first beat of each measure is played with a louder, higher click.
 
-Use **BPM range** to set inclusive lower and upper limits (1–300). Each new PDF receives a random integer tempo within those limits.
+Use **BPM range** to set inclusive lower and upper limits (1–300) for the Random BPM and Build up methods.
 
 stephen adding stuff
 
@@ -45,4 +45,6 @@ To give one PDF folder its own tempo range and time signature, add a file named
 
 All three values are required. `minBpm` and `maxBpm` must be whole numbers from
 1 to 300, with the minimum no greater than the maximum. The time signature must
-use a numerator from 1 to 32 and a denominator of 1, 2, 4, 8, or 16. `targetTempo` is optional and must be a whole number from 1 to 300. If it is omitted, the app uses the value in its Target tempo field (60 BPM by default). The metronome continues at the target BPM after the PDF round completes, until **End session** is selected. If the file is absent or invalid, the app uses its normal starting values.
+use a numerator from 1 to 32 and a denominator of 1, 2, 4, 8, or 16. `targetTempo` is optional and must be a whole number from 1 to 300. If it is omitted, the app uses the value in its Target tempo field (60 BPM by default). The metronome continues at the target BPM after the PDF round completes, until **End session** is selected.
+
+Use **Tempo method** to choose **Random BPM**, **Half target**, or **Build up**. Build up requires a display time of at least 60 seconds. It resets to the low BPM whenever a new PDF appears, then calculates equal 30-second increases that reach the high BPM before the next PDF. Tempo method is chosen in the app and is not read from `practice-settings.json`; it defaults to Random BPM. If the file is absent or invalid, the app uses its normal starting values.

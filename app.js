@@ -39,6 +39,9 @@ const tempoRangeStatus = document.querySelector("#tempo-range-status");
 const targetTempoForm = document.querySelector("#target-tempo-form");
 const targetTempoInput = document.querySelector("#target-tempo-input");
 const targetTempoStatus = document.querySelector("#target-tempo-status");
+const tempoMethodForm = document.querySelector("#tempo-method-form");
+const tempoMethodInput = document.querySelector("#tempo-method-input");
+const tempoMethodStatus = document.querySelector("#tempo-method-status");
 let documentPdf;
 let currentPage = 1;
 let playlist = [];
@@ -58,6 +61,9 @@ let beatInMeasure = 0;
 let minimumBpm = 60;
 let maximumBpm = 120;
 let targetTempo = Number(targetTempoInput.value);
+let tempoMethod = "random";
+let activeTempoMethod = "random";
+let rampTimer;
 const defaultPracticeSettings = Object.freeze({
   minimumBpm,
   maximumBpm,
@@ -72,6 +78,64 @@ function parseTimeSignature(value) {
   const allowedDenominators = [1, 2, 4, 8, 16];
   if (!numerator || numerator > 32 || !allowedDenominators.includes(denominator)) return null;
   return { numerator, value: `${numerator}/${denominator}` };
+}
+
+const tempoMethodLabels = {
+  random: "Random BPM",
+  "half-target": "Half target",
+  "build-up": "Build up",
+};
+
+function isTempoMethod(value) {
+  return Object.prototype.hasOwnProperty.call(tempoMethodLabels, value);
+}
+
+function methodMayBuildUp() {
+  return tempoMethod === "build-up";
+}
+
+function showBuildUpDurationError() {
+  tempoMethodStatus.textContent = "Build up requires at least 60 seconds per PDF";
+}
+
+function setCurrentTempo(tempo, method) {
+  currentBpm = tempo;
+  bpmLabel.textContent = `Metronome · ${currentBpm} BPM · ${method}`;
+  if (sessionStarted) startVisualMetronome();
+}
+
+function updateTempoMethodStatus(prefix = "Active") {
+  tempoMethodStatus.textContent = `${prefix}: ${tempoMethodLabels[activeTempoMethod]}`;
+}
+
+function startBuildUp() {
+  const transitions = Math.ceil(displayDurationSeconds / 30) - 1;
+  let stepIndex = 0;
+  setCurrentTempo(minimumBpm, tempoMethodLabels["build-up"]);
+  clearInterval(rampTimer);
+  rampTimer = setInterval(() => {
+    if (!sessionStarted || activeTempoMethod !== "build-up" || stepIndex >= transitions) return;
+    stepIndex += 1;
+    const progress = stepIndex / transitions;
+    const nextTempo = Number((minimumBpm + ((maximumBpm - minimumBpm) * progress)).toFixed(1));
+    setCurrentTempo(nextTempo, tempoMethodLabels["build-up"]);
+  }, 30000);
+}
+
+function beginTempoMethod() {
+  clearInterval(rampTimer);
+  activeTempoMethod = tempoMethod;
+  updateTempoMethodStatus();
+}
+
+function applyTempoForNewPdf() {
+  if (activeTempoMethod === "random") {
+    setRandomTempo();
+  } else if (activeTempoMethod === "half-target") {
+    setCurrentTempo(Math.max(1, Math.round(targetTempo / 2)), tempoMethodLabels["half-target"]);
+  } else if (activeTempoMethod === "build-up") {
+    startBuildUp();
+  }
 }
 
 function applyPracticeSettings(settings, source = "the defaults") {
@@ -174,6 +238,7 @@ async function completeRound() {
 
   clearTimeout(rotationTimer);
   clearInterval(countdownTimer);
+  clearInterval(rampTimer);
   isStopped = true;
   sessionStarted = false;
   playlist = [];
@@ -190,8 +255,7 @@ async function completeRound() {
   startSessionButton.disabled = true;
   stopButton.disabled = true;
   endSessionButton.hidden = false;
-  currentBpm = targetTempo;
-  bpmLabel.textContent = `Metronome · ${currentBpm} BPM`;
+  setCurrentTempo(targetTempo, "Target tempo");
   startVisualMetronome();
 }
 
@@ -200,6 +264,7 @@ async function finishSession() {
   sessionStarted = false;
   clearTimeout(rotationTimer);
   clearInterval(countdownTimer);
+  clearInterval(rampTimer);
   clearInterval(visualMetronomeTimer);
   await audioContext?.suspend();
   playlist = [];
@@ -221,9 +286,8 @@ async function finishSession() {
 }
 
 function setRandomTempo() {
-  currentBpm = Math.floor(Math.random() * (maximumBpm - minimumBpm + 1)) + minimumBpm;
-  bpmLabel.textContent = `Metronome · ${currentBpm} BPM`;
-  if (!isStopped) startVisualMetronome();
+  const randomTempo = Math.floor(Math.random() * (maximumBpm - minimumBpm + 1)) + minimumBpm;
+  setCurrentTempo(randomTempo, tempoMethodLabels.random);
 }
 
 function shuffle(items) {
@@ -327,7 +391,7 @@ async function showNextPdf() {
       : encodeURI(result.pdf);
     documentPdf = await pdfjsLib.getDocument(source).promise;
     await renderPage(1);
-    setRandomTempo();
+    applyTempoForNewPdf();
     pageControls.hidden = false;
     fileName.textContent = result.name;
     collectionCount.textContent = `${playlist.length} PDF${playlist.length === 1 ? "" : "s"} in your collection · Round position ${playlistIndex + 1} of ${playlist.length}`;
@@ -344,6 +408,11 @@ async function showNextPdf() {
 
 startSessionButton.addEventListener("click", async () => {
   if (sessionStarted) return;
+  if (!selectedFolderPdfs.length) await loadBundledPracticeSettings();
+  if (methodMayBuildUp() && displayDurationSeconds < 60) {
+    showBuildUpDurationError();
+    return;
+  }
   sessionStarted = true;
   isStopped = false;
   playlist = [];
@@ -352,8 +421,8 @@ startSessionButton.addEventListener("click", async () => {
   startSessionButton.disabled = true;
   stopButton.disabled = false;
   endSessionButton.hidden = true;
-  if (!selectedFolderPdfs.length) await loadBundledPracticeSettings();
   if (metronomeEnabled) await enableMetronome();
+  beginTempoMethod();
   showNextPdf();
 });
 button.addEventListener("click", showNextPdf);
@@ -387,6 +456,11 @@ durationForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const requestedDuration = Number(durationInput.value);
   if (!Number.isInteger(requestedDuration) || requestedDuration < 1 || requestedDuration > 3600) {
+    durationInput.focus();
+    return;
+  }
+  if (requestedDuration < 60 && methodMayBuildUp()) {
+    showBuildUpDurationError();
     durationInput.focus();
     return;
   }
@@ -471,6 +545,17 @@ targetTempoForm.addEventListener("submit", (event) => {
   }
   targetTempo = requestedTarget;
   targetTempoStatus.textContent = `Target: ${targetTempo} BPM`;
+});
+tempoMethodForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!isTempoMethod(tempoMethodInput.value)) return;
+  tempoMethod = tempoMethodInput.value;
+  if (methodMayBuildUp() && displayDurationSeconds < 60) {
+    showBuildUpDurationError();
+    return;
+  }
+  activeTempoMethod = tempoMethod;
+  tempoMethodStatus.textContent = `Next session: ${tempoMethodLabels[tempoMethod]}`;
 });
 previousPage.addEventListener("click", () => currentPage > 1 && renderPage(currentPage - 1));
 nextPage.addEventListener("click", () => currentPage < documentPdf.numPages && renderPage(currentPage + 1));

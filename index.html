@@ -88,8 +88,18 @@
           <button type="submit">Set target</button>
           <span id="target-tempo-status">60 BPM</span>
         </form>
+        <form id="tempo-method-form" class="tempo-method-form">
+          <label for="tempo-method-input">Tempo method</label>
+          <select id="tempo-method-input">
+            <option value="random">Random BPM</option>
+            <option value="half-target">Half target</option>
+            <option value="build-up">Build up</option>
+          </select>
+          <button type="submit">Set method</button>
+          <span id="tempo-method-status">Random BPM</span>
+        </form>
       </section>
     </main>
-    <script type="module" src="app.js?v=target-tempo-2"></script>
+    <script type="module" src="app.js?v=tempo-method-6"></script>
   </body>
 </html>
