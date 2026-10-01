@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Random PDF</title>
-    <link rel="stylesheet" href="style.css?v=dynamics-1" />
+    <link rel="stylesheet" href="style.css?v=session-length-1" />
   </head>
   <body>
     <main>
@@ -55,8 +55,6 @@
       <p id="collection-count" class="count"></p>
       <p id="rotation-status" class="count" aria-live="polite"></p>
       <section class="options-panel">
-        <p class="eyebrow">PDF PICKER</p>
-        <p class="intro">Pull a surprise PDF from your collection.</p>
         <div class="folder-picker">
           <input id="folder-input" type="file" accept="application/pdf,.pdf,application/json,.json" webkitdirectory multiple hidden />
           <button id="folder-button" type="button">Choose PDF folder</button>
@@ -67,6 +65,13 @@
           <input id="duration-input" type="number" min="1" max="3600" value="60" inputmode="numeric" required />
           <span>seconds</span>
           <button type="submit">Apply</button>
+        </form>
+        <form id="total-session-form" class="total-session-form">
+          <label for="total-session-input">Total session time</label>
+          <input id="total-session-input" type="number" min="1" max="1440" step="0.1" inputmode="decimal" required />
+          <span>minutes</span>
+          <button type="submit">Apply total</button>
+          <span id="total-session-status">Optional</span>
         </form>
         <form id="time-signature-form" class="time-signature-form">
           <label for="time-signature-input">Time signature</label>
@@ -105,6 +110,6 @@
         </div>
       </section>
     </main>
-    <script type="module" src="app.js?v=dynamics-2"></script>
+    <script type="module" src="app.js?v=session-length-1"></script>
   </body>
 </html>

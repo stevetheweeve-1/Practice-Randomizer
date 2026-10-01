@@ -19,6 +19,8 @@ Set the number of seconds in **Display each PDF for** and press **Apply** to cha
 
 Use **Choose PDF folder** to select any folder on your computer. Its PDFs become the active rotation for the current browser session; no files are uploaded or copied.
 
+Use **Total session time** to set the length of the whole round in minutes. The app divides that time across every PDF, distributing any extra seconds so the total is exact. Press **Apply** beside the per-PDF duration to return to manual timing. With the Build up tempo method, every calculated PDF duration must be at least 60 seconds.
+
 Press **Sound on** once to start the metronome. Press **Sound off** to silence the clicks while keeping the visual beat indicator running. Browsers require this one interaction before allowing audio playback.
 
 Use **Stop session** to pause PDF rotation while the metronome continues. Press **Resume session** to continue from the displayed PDF.
