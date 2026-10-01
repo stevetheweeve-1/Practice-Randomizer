@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Random PDF</title>
-    <link rel="stylesheet" href="style.css?v=session-length-1" />
+    <link rel="stylesheet" href="style.css?v=setup-screen-1" />
   </head>
-  <body>
+  <body data-view="setup">
     <main>
       <div class="top-session-control">
         <div class="session-buttons">
@@ -26,34 +26,39 @@
           <div class="viewer-actions">
             <div class="metronome" aria-live="polite">
               <span id="beat-light" class="beat-light" aria-hidden="true"></span>
-              <span id="bpm-label">Metronome · 60 BPM</span>
+              <span id="bpm-label">Metronome Â· 60 BPM</span>
             </div>
             <span id="dynamics-label" class="dynamics-label" hidden></span>
-            <button id="another-pdf" type="button" disabled>Next now <span aria-hidden="true">→</span></button>
+            <button id="another-pdf" type="button" disabled>Next now <span aria-hidden="true">â</span></button>
           </div>
         </div>
         <div id="waiting-state" class="empty-state">
-          <span aria-hidden="true">⌁</span>
+          <span aria-hidden="true">â</span>
           <h2>Ready to begin</h2>
           <p>Click <strong>Start session</strong> to display the first PDF.</p>
         </div>
         <div id="empty-state" class="empty-state" hidden>
-          <span aria-hidden="true">⌁</span>
+          <span aria-hidden="true">â</span>
           <h2>No PDFs yet</h2>
           <p>Put one or more PDF files in the <code>pdfs</code> folder, then try again.</p>
         </div>
         <div id="pdf-viewer" class="pdf-viewer" aria-label="Random PDF viewer">
-          <div id="loading" class="loading">Rendering PDF…</div>
+          <div id="loading" class="loading">Rendering PDFâ¦</div>
           <canvas id="pdf-canvas" hidden></canvas>
           <div id="page-controls" class="page-controls" hidden>
-            <button id="previous-page" class="page-button" type="button" aria-label="Previous page">←</button>
+            <button id="previous-page" class="page-button" type="button" aria-label="Previous page">â</button>
             <span id="page-number"></span>
-            <button id="next-page" class="page-button" type="button" aria-label="Next page">→</button>
+            <button id="next-page" class="page-button" type="button" aria-label="Next page">â</button>
           </div>
         </div>
       </section>
       <p id="collection-count" class="count"></p>
       <p id="rotation-status" class="count" aria-live="polite"></p>
+      <div class="setup-heading">
+        <p class="label">Weeve's Practice Randomizer</p>
+        <h1>Set up your session</h1>
+        <p>Choose your material and settings, then begin when you are ready.</p>
+      </div>
       <section class="options-panel">
         <div class="folder-picker">
           <input id="folder-input" type="file" accept="application/pdf,.pdf,application/json,.json" webkitdirectory multiple hidden />
@@ -110,6 +115,6 @@
         </div>
       </section>
     </main>
-    <script type="module" src="app.js?v=session-length-1"></script>
+    <script type="module" src="app.js?v=setup-screen-1"></script>
   </body>
 </html>
