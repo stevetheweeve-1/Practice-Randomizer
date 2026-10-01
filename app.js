@@ -82,6 +82,14 @@ const defaultPracticeSettings = Object.freeze({
 
 const dynamicsChoices = ["Piano (p)", "Mezzo-piano (mp)", "Mezzo-forte (mf)", "Forte (f)", "Crescendo", "Decrescendo"];
 
+function showSetupView() {
+  document.body.dataset.view = "setup";
+}
+
+function showPracticeView() {
+  document.body.dataset.view = "practice";
+}
+
 function stopDynamicsPractice() {
   dynamicsLabel.hidden = true;
 }
@@ -344,6 +352,7 @@ async function finishSession() {
   stopButton.classList.remove("resume");
   stopButton.disabled = true;
   endSessionButton.hidden = true;
+  showSetupView();
 }
 
 function setRandomTempo() {
@@ -487,6 +496,7 @@ startSessionButton.addEventListener("click", async () => {
   }
   sessionStarted = true;
   isStopped = false;
+  showPracticeView();
   playlist = [];
   playlistIndex = 0;
   startSessionButton.textContent = "Session running";

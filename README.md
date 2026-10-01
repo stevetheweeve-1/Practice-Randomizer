@@ -25,6 +25,8 @@ Press **Sound on** once to start the metronome. Press **Sound off** to silence t
 
 Use **Stop session** to pause PDF rotation while the metronome continues. Press **Resume session** to continue from the displayed PDF.
 
+Choose the folder and practice settings on the setup screen first. Starting the session switches to a focused PDF practice screen; use **End session** to return to setup.
+
 Set **Time signature** in `x/y` format (for example, `3/4` or `6/8`). The first beat of each measure is played with a louder, higher click.
 
 Use **BPM range** to set inclusive lower and upper limits (1–300) for the Random BPM and Build up methods.

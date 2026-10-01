@@ -65,3 +65,19 @@ canvas { display: block; max-width: 100%; height: auto; box-shadow: 0 5px 20px #
 code { padding: 2px 5px; background: #e3e7d8; }
 .count { color: #657067; font-size: .7rem; letter-spacing: .04em; margin: 23px 4px; }
 @media (max-width: 600px) { .viewer-heading { align-items: flex-start; flex-direction: column; } .viewer-actions { width: 100%; justify-content: space-between; } .pdf-viewer { min-height: 56vh; padding: 15px; } }
+
+/* Setup is a deliberate first step; the practice view is shown only after Start session. */
+body[data-view="setup"] main { display: flex; flex-direction: column; }
+body[data-view="setup"] .options-panel { order: 1; padding: clamp(22px, 4vw, 34px); border: 1px solid #9da891; border-radius: 18px; background: #f7f4eb; box-shadow: 8px 9px 0 #bcc7ae; }
+body[data-view="setup"] .top-session-control { order: 2; display: flex; justify-content: center; margin-top: 24px; }
+body[data-view="setup"] .top-countdown { display: none; }
+body[data-view="setup"] .viewer-card,
+body[data-view="setup"] .count,
+body[data-view="setup"] .stop-button,
+body[data-view="setup"] .end-session-button { display: none; }
+body[data-view="practice"] .options-panel,
+body[data-view="practice"] .start-session-button { display: none; }
+.setup-heading { margin-bottom: 30px; }
+.setup-heading h1 { font-size: clamp(2.3rem, 6vw, 4.2rem); line-height: .96; margin: 0; }
+.setup-heading p:last-child { max-width: 530px; color: #536055; line-height: 1.7; margin: 16px 0 0; }
+body[data-view="practice"] .setup-heading { display: none; }
