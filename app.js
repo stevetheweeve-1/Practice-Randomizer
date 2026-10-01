@@ -28,6 +28,9 @@ const startSessionButton = document.querySelector("#start-session-button");
 const pdfCountdown = document.querySelector("#pdf-countdown");
 const durationForm = document.querySelector("#duration-form");
 const durationInput = document.querySelector("#duration-input");
+const totalSessionForm = document.querySelector("#total-session-form");
+const totalSessionInput = document.querySelector("#total-session-input");
+const totalSessionStatus = document.querySelector("#total-session-status");
 const folderInput = document.querySelector("#folder-input");
 const folderButton = document.querySelector("#folder-button");
 const folderStatus = document.querySelector("#folder-status");
@@ -51,6 +54,9 @@ let playlistIndex = 0;
 let rotationTimer;
 let countdownTimer;
 let displayDurationSeconds = 60;
+let currentDisplayDurationSeconds = displayDurationSeconds;
+let totalSessionSeconds = null;
+let sessionDurationPlan = [];
 let audioContext;
 let visualMetronomeTimer;
 let currentBpm = 60;
@@ -117,6 +123,40 @@ function showBuildUpDurationError() {
   tempoMethodStatus.textContent = "Build up requires at least 60 seconds per PDF";
 }
 
+function calculateSessionDurations(pdfCount) {
+  const baseDuration = Math.floor(totalSessionSeconds / pdfCount);
+  const remainingSeconds = totalSessionSeconds % pdfCount;
+  return Array.from({ length: pdfCount }, (_, index) => baseDuration + (index < remainingSeconds ? 1 : 0));
+}
+
+async function prepareSessionDurationPlan() {
+  if (totalSessionSeconds === null) {
+    sessionDurationPlan = [];
+    return true;
+  }
+  let pdfCount = selectedFolderPdfs.length;
+  if (!pdfCount) {
+    const response = await fetch("/api/pdfs", { cache: "no-store" });
+    const result = await response.json();
+    pdfCount = result.pdfs?.length ?? 0;
+  }
+  if (!pdfCount) {
+    totalSessionStatus.textContent = "Choose a folder with PDFs first";
+    return false;
+  }
+  sessionDurationPlan = calculateSessionDurations(pdfCount);
+  const shortestDuration = Math.min(...sessionDurationPlan);
+  const longestDuration = Math.max(...sessionDurationPlan);
+  totalSessionStatus.textContent = shortestDuration === longestDuration
+    ? `${pdfCount} PDFs · ${shortestDuration}s each`
+    : `${pdfCount} PDFs · ${shortestDuration}–${longestDuration}s each`;
+  if (methodMayBuildUp() && shortestDuration < 60) {
+    showBuildUpDurationError();
+    return false;
+  }
+  return true;
+}
+
 function setCurrentTempo(tempo, method) {
   currentBpm = tempo;
   bpmLabel.textContent = `Metronome · ${currentBpm} BPM · ${method}`;
@@ -128,7 +168,7 @@ function updateTempoMethodStatus(prefix = "Active") {
 }
 
 function startBuildUp() {
-  const transitions = Math.ceil(displayDurationSeconds / 30) - 1;
+  const transitions = Math.ceil(currentDisplayDurationSeconds / 30) - 1;
   let stepIndex = 0;
   setCurrentTempo(minimumBpm, tempoMethodLabels["build-up"]);
   clearInterval(rampTimer);
@@ -324,6 +364,10 @@ async function startNewRound() {
   if (selectedFolderPdfs.length) {
     playlist = shuffle(selectedFolderPdfs);
     playlistIndex = 0;
+    if (totalSessionSeconds !== null) {
+      if (sessionDurationPlan.length !== playlist.length) sessionDurationPlan = calculateSessionDurations(playlist.length);
+      playlist = playlist.map((item, index) => ({ ...item, durationSeconds: sessionDurationPlan[index] }));
+    }
     return;
   }
   // Build one complete shuffled round from the existing API. This means the
@@ -345,13 +389,17 @@ async function startNewRound() {
   }
   playlist = shuffle([...byPath.values()]);
   playlistIndex = 0;
+  if (totalSessionSeconds !== null) {
+    if (sessionDurationPlan.length !== playlist.length) sessionDurationPlan = calculateSessionDurations(playlist.length);
+    playlist = playlist.map((item, index) => ({ ...item, durationSeconds: sessionDurationPlan[index] }));
+  }
 }
 
 function startCountdown() {
   if (isStopped) return;
   clearTimeout(rotationTimer);
   clearInterval(countdownTimer);
-  const endsAt = Date.now() + displayDurationSeconds * 1000;
+  const endsAt = Date.now() + currentDisplayDurationSeconds * 1000;
   const updateCountdown = () => {
     const secondsLeft = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
     rotationStatus.textContent = `Next PDF in ${secondsLeft}s · ${playlist.length - playlistIndex} remaining this round`;
@@ -359,7 +407,7 @@ function startCountdown() {
   };
   updateCountdown();
   countdownTimer = setInterval(updateCountdown, 250);
-  rotationTimer = setTimeout(showNextPdf, displayDurationSeconds * 1000);
+  rotationTimer = setTimeout(showNextPdf, currentDisplayDurationSeconds * 1000);
 }
 
 async function renderPage(page) {
@@ -390,6 +438,7 @@ async function showNextPdf() {
     }
     if (playlistIndex >= playlist.length) await startNewRound();
     const result = playlist[playlistIndex];
+    currentDisplayDurationSeconds = result?.durationSeconds ?? displayDurationSeconds;
     if (!result) {
       viewer.hidden = true;
       waitingState.hidden = true;
@@ -431,7 +480,8 @@ async function showNextPdf() {
 startSessionButton.addEventListener("click", async () => {
   if (sessionStarted) return;
   if (!selectedFolderPdfs.length) await loadBundledPracticeSettings();
-  if (methodMayBuildUp() && displayDurationSeconds < 60) {
+  if (!(await prepareSessionDurationPlan())) return;
+  if (totalSessionSeconds === null && methodMayBuildUp() && displayDurationSeconds < 60) {
     showBuildUpDurationError();
     return;
   }
@@ -493,7 +543,26 @@ durationForm.addEventListener("submit", (event) => {
     return;
   }
   displayDurationSeconds = requestedDuration;
+  totalSessionSeconds = null;
+  sessionDurationPlan = [];
+  totalSessionStatus.textContent = "Using manual duration";
   startCountdown();
+});
+totalSessionForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (sessionStarted) {
+    totalSessionStatus.textContent = "End the current session before changing its total time";
+    return;
+  }
+  const requestedMinutes = Number(totalSessionInput.value);
+  if (!Number.isFinite(requestedMinutes) || requestedMinutes < 1 || requestedMinutes > 1440) {
+    totalSessionStatus.textContent = "Use 1–1,440 minutes";
+    totalSessionInput.focus();
+    return;
+  }
+  totalSessionSeconds = Math.round(requestedMinutes * 60);
+  if (!(await prepareSessionDurationPlan())) return;
+  if (totalSessionSeconds > 0) durationInput.value = Math.floor(totalSessionSeconds / (sessionDurationPlan.length || 1));
 });
 folderButton.addEventListener("click", () => folderInput.click());
 folderInput.addEventListener("change", async () => {
@@ -515,6 +584,7 @@ folderInput.addEventListener("change", async () => {
     }
   }
   applyPracticeSettings(settings, "practice-settings.json");
+  if (totalSessionSeconds !== null) await prepareSessionDurationPlan();
 
   if (!selectedFolderPdfs.length) {
     folderStatus.textContent = "No PDFs found — using the bundled PDFs";

@@ -22,6 +22,9 @@ h1 { font-size: clamp(2.8rem, 7vw, 5.8rem); line-height: .94; margin: 0; }
 .duration-form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
 .duration-form input { width: 58px; border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; padding: 7px; }
 .duration-form button { padding: 8px 12px; border-radius: 6px; background: #66745d; font-size: .63rem; }
+.total-session-form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
+.total-session-form input { width: 58px; border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; padding: 7px; }
+.total-session-form button { padding: 8px 12px; border-radius: 6px; background: #66745d; font-size: .63rem; }
 .folder-picker { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 14px; color: #536055; font-size: .69rem; }
 .folder-picker button { padding: 8px 12px; border-radius: 6px; background: #66745d; font-size: .63rem; }
 .time-signature-form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
