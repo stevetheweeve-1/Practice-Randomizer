@@ -1,17 +1,16 @@
 # Random PDF
 
-A local web app that displays one randomly ordered PDF from the `pdfs/` folder for the selected duration. Each PDF appears once per round before the app reshuffles the collection. It also searches PDFs in nested folders.
+A local web app that displays PDFs from a folder you choose on your computer. Each PDF appears once per round before the app reshuffles the collection.
 
 ## Run it
 
-1. Add your PDF files to `pdfs/`.
-2. From this folder, run:
+1. From this folder, run:
 
    ```sh
    python3 app.py
    ```
 
-3. Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in a browser.
+2. Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in a browser.
 
 Use **Next now** to advance without waiting; it still will not repeat a PDF within the current round.
 
