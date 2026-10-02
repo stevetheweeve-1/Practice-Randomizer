@@ -142,12 +142,7 @@ async function prepareSessionDurationPlan() {
     sessionDurationPlan = [];
     return true;
   }
-  let pdfCount = selectedFolderPdfs.length;
-  if (!pdfCount) {
-    const response = await fetch("/api/pdfs", { cache: "no-store" });
-    const result = await response.json();
-    pdfCount = result.pdfs?.length ?? 0;
-  }
+  const pdfCount = selectedFolderPdfs.length;
   if (!pdfCount) {
     totalSessionStatus.textContent = "Choose a folder with PDFs first";
     return false;
@@ -241,16 +236,6 @@ function applyPracticeSettings(settings, source = "the defaults") {
   tempoRangeStatus.textContent = `${minimum}–${maximum} BPM from ${source}`;
   timeSignatureStatus.textContent = `${timeSignature.value} from ${source}`;
   return true;
-}
-
-async function loadBundledPracticeSettings() {
-  try {
-    const response = await fetch("/api/practice-settings", { cache: "no-store" });
-    const result = await response.json();
-    applyPracticeSettings(result.settings, "practice-settings.json");
-  } catch {
-    applyPracticeSettings(null);
-  }
 }
 
 function tick() {
@@ -370,33 +355,12 @@ function shuffle(items) {
 }
 
 async function startNewRound() {
-  if (selectedFolderPdfs.length) {
-    playlist = shuffle(selectedFolderPdfs);
+  if (!selectedFolderPdfs.length) {
+    playlist = [];
     playlistIndex = 0;
-    if (totalSessionSeconds !== null) {
-      if (sessionDurationPlan.length !== playlist.length) sessionDurationPlan = calculateSessionDurations(playlist.length);
-      playlist = playlist.map((item, index) => ({ ...item, durationSeconds: sessionDurationPlan[index] }));
-    }
     return;
   }
-  // Build one complete shuffled round from the existing API. This means the
-  // app also works while an already-running local server is still in use.
-  const byPath = new Map();
-  let expectedCount = 0;
-  let attempts = 0;
-  while (byPath.size < expectedCount || expectedCount === 0) {
-    const response = await fetch("/api/random-pdf", { cache: "no-store" });
-    const result = await response.json();
-    if (!result.pdf) break;
-    expectedCount = result.count;
-    byPath.set(result.pdf, { pdf: result.pdf, name: result.name });
-    attempts += 1;
-    // A useful failure instead of an endless wait if the folder changes mid-round.
-    if (attempts > Math.max(30, expectedCount * 20)) {
-      throw new Error("Could not collect the PDF list");
-    }
-  }
-  playlist = shuffle([...byPath.values()]);
+  playlist = shuffle(selectedFolderPdfs);
   playlistIndex = 0;
   if (totalSessionSeconds !== null) {
     if (sessionDurationPlan.length !== playlist.length) sessionDurationPlan = calculateSessionDurations(playlist.length);
@@ -479,7 +443,7 @@ async function showNextPdf() {
     startCountdown();
   } catch (error) {
     fileName.textContent = "Couldn’t load your collection";
-    collectionCount.textContent = "Make sure the local server is running, then try again.";
+    collectionCount.textContent = "Try choosing the folder again, then start a new session.";
   } finally {
     button.disabled = isStopped;
     button.firstChild.textContent = "Next now ";
@@ -488,7 +452,11 @@ async function showNextPdf() {
 
 startSessionButton.addEventListener("click", async () => {
   if (sessionStarted) return;
-  if (!selectedFolderPdfs.length) await loadBundledPracticeSettings();
+  if (!selectedFolderPdfs.length) {
+    folderStatus.textContent = "Choose a folder containing PDFs before starting";
+    folderButton.focus();
+    return;
+  }
   if (!(await prepareSessionDurationPlan())) return;
   if (totalSessionSeconds === null && methodMayBuildUp() && displayDurationSeconds < 60) {
     showBuildUpDurationError();
@@ -597,12 +565,11 @@ folderInput.addEventListener("change", async () => {
   if (totalSessionSeconds !== null) await prepareSessionDurationPlan();
 
   if (!selectedFolderPdfs.length) {
-    folderStatus.textContent = "No PDFs found — using the bundled PDFs";
+    folderStatus.textContent = "No PDFs found — choose another folder";
     playlist = [];
     playlistIndex = 0;
     clearTimeout(rotationTimer);
     clearInterval(countdownTimer);
-    showNextPdf();
     return;
   }
 
@@ -667,6 +634,6 @@ tempoMethodForm.addEventListener("submit", (event) => {
 });
 previousPage.addEventListener("click", () => currentPage > 1 && renderPage(currentPage - 1));
 nextPage.addEventListener("click", () => currentPage < documentPdf.numPages && renderPage(currentPage + 1));
-rotationStatus.textContent = "Press Start session to begin";
+rotationStatus.textContent = "Choose a PDF folder to begin";
 viewer.hidden = true;
 loading.hidden = true;
