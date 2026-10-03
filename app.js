@@ -26,14 +26,21 @@ const stopButton = document.querySelector("#stop-button");
 const endSessionButton = document.querySelector("#end-session-button");
 const startSessionButton = document.querySelector("#start-session-button");
 const pdfCountdown = document.querySelector("#pdf-countdown");
+const totalSessionCountdown = document.querySelector("#total-session-countdown");
 const durationForm = document.querySelector("#duration-form");
 const durationInput = document.querySelector("#duration-input");
+const durationLabel = document.querySelector("#duration-label");
 const totalSessionForm = document.querySelector("#total-session-form");
 const totalSessionInput = document.querySelector("#total-session-input");
 const totalSessionStatus = document.querySelector("#total-session-status");
 const folderInput = document.querySelector("#folder-input");
 const folderButton = document.querySelector("#folder-button");
 const folderStatus = document.querySelector("#folder-status");
+const practiceModeInput = document.querySelector("#practice-mode-input");
+const practiceModeStatus = document.querySelector("#practice-mode-status");
+const singlePdfPicker = document.querySelector("#single-pdf-picker");
+const singlePdfInput = document.querySelector("#single-pdf-input");
+const singlePdfStatus = document.querySelector("#single-pdf-status");
 const timeSignatureForm = document.querySelector("#time-signature-form");
 const timeSignatureInput = document.querySelector("#time-signature-input");
 const timeSignatureStatus = document.querySelector("#time-signature-status");
@@ -61,6 +68,9 @@ let audioContext;
 let visualMetronomeTimer;
 let currentBpm = 60;
 let selectedFolderPdfs = [];
+let sectionPdfs = [];
+let selectedSinglePdf = null;
+let practiceMode = "sections";
 let isStopped = true;
 let sessionStarted = false;
 let metronomeEnabled = true;
@@ -74,6 +84,10 @@ let activeTempoMethod = "random";
 let rampTimer;
 let sectionElapsedMs = 0;
 let sectionActiveSince = null;
+let totalSessionElapsedMs = 0;
+let totalSessionActiveSince = null;
+let totalSessionTimer;
+let totalSessionCountdownTimer;
 let dynamicsEnabled = false;
 const defaultPracticeSettings = Object.freeze({
   minimumBpm,
@@ -90,6 +104,48 @@ function showSetupView() {
 
 function showPracticeView() {
   document.body.dataset.view = "practice";
+}
+
+function isSectionPdf(item) {
+  const pathParts = item.file.webkitRelativePath.split("/").slice(1, -1);
+  return pathParts.some((part) => part.toLowerCase() === "sections");
+}
+
+function getActivePdfs() {
+  if (practiceMode === "single") return selectedSinglePdf ? [selectedSinglePdf] : [];
+  return sectionPdfs.length ? sectionPdfs : selectedFolderPdfs;
+}
+
+function populateSinglePdfPicker() {
+  singlePdfInput.replaceChildren();
+  selectedFolderPdfs.forEach((item, index) => {
+    const option = document.createElement("option");
+    option.value = String(index);
+    option.textContent = item.file.webkitRelativePath.split("/").slice(1).join(" / ");
+    singlePdfInput.append(option);
+  });
+  singlePdfInput.disabled = !selectedFolderPdfs.length;
+  selectedSinglePdf = selectedFolderPdfs[0] ?? null;
+  singlePdfStatus.textContent = selectedSinglePdf ? "Selected: " + selectedSinglePdf.name : "Choose a folder first";
+}
+
+function updatePracticeModeUi() {
+  const isSingle = practiceMode === "single";
+  singlePdfPicker.hidden = !isSingle;
+  totalSessionForm.hidden = false;
+  durationLabel.textContent = isSingle ? "Refresh tempo and dynamics every" : "Display each PDF for";
+  button.firstChild.textContent = isSingle ? "Refresh now " : "Next now ";
+  if (isSingle) {
+    sessionDurationPlan = [];
+    practiceModeStatus.textContent = "Repeat one section; tempo and dynamics refresh each interval";
+    totalSessionStatus.textContent = totalSessionSeconds === null
+      ? "Optional second timer"
+      : "Total timer: " + Math.round(totalSessionSeconds / 60) + " minutes";
+  } else {
+    practiceModeStatus.textContent = sectionPdfs.length
+      ? sectionPdfs.length + " PDFs in the Sections folder"
+      : "No Sections folder found; all PDFs will rotate";
+  }
 }
 
 function stopDynamicsPractice() {
@@ -140,11 +196,11 @@ function calculateSessionDurations(pdfCount) {
 }
 
 async function prepareSessionDurationPlan() {
-  if (totalSessionSeconds === null) {
+  if (totalSessionSeconds === null || practiceMode === "single") {
     sessionDurationPlan = [];
     return true;
   }
-  const pdfCount = selectedFolderPdfs.length;
+  const pdfCount = getActivePdfs().length;
   if (!pdfCount) {
     totalSessionStatus.textContent = "Choose a folder with PDFs first";
     return false;
@@ -193,6 +249,53 @@ function getSectionElapsedMs() {
 
 function getSectionRemainingMs() {
   return Math.max(0, (currentDisplayDurationSeconds * 1000) - getSectionElapsedMs());
+}
+
+function hasTotalSessionLimit() {
+  return practiceMode === "single" && totalSessionSeconds !== null;
+}
+
+function resetTotalSessionClock() {
+  totalSessionElapsedMs = 0;
+  totalSessionActiveSince = hasTotalSessionLimit() ? Date.now() : null;
+}
+
+function pauseTotalSessionClock() {
+  if (totalSessionActiveSince === null) return;
+  totalSessionElapsedMs += Date.now() - totalSessionActiveSince;
+  totalSessionActiveSince = null;
+}
+
+function resumeTotalSessionClock() {
+  if (hasTotalSessionLimit()) totalSessionActiveSince = Date.now();
+}
+
+function getTotalSessionRemainingMs() {
+  return Math.max(0, (totalSessionSeconds * 1000) - (totalSessionElapsedMs + (totalSessionActiveSince === null ? 0 : Date.now() - totalSessionActiveSince)));
+}
+
+function clearTotalSessionTimers() {
+  clearTimeout(totalSessionTimer);
+  clearInterval(totalSessionCountdownTimer);
+}
+
+function startTotalSessionCountdown() {
+  clearTotalSessionTimers();
+  if (!hasTotalSessionLimit()) {
+    totalSessionCountdown.textContent = "Total time: no limit";
+    return;
+  }
+  const remainingMs = getTotalSessionRemainingMs();
+  const endsAt = Date.now() + remainingMs;
+  const updateTotalCountdown = () => {
+    const secondsLeft = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+    totalSessionCountdown.textContent = "Total time: " + secondsLeft + "s left";
+  };
+  updateTotalCountdown();
+  totalSessionCountdownTimer = setInterval(updateTotalCountdown, 250);
+  totalSessionTimer = setTimeout(() => {
+    if (sessionStarted && !isStopped) void completeRound();
+  }, remainingMs);
 }
 
 function startBuildUp() {
@@ -321,6 +424,7 @@ async function completeRound() {
   clearTimeout(rotationTimer);
   clearInterval(countdownTimer);
   clearTimeout(rampTimer);
+  clearTotalSessionTimers();
   stopDynamicsPractice();
   isStopped = true;
   sessionStarted = false;
@@ -332,7 +436,8 @@ async function completeRound() {
   fileName.textContent = "Round complete";
   collectionCount.textContent = `Metronome continues at your target tempo of ${targetTempo} BPM.`;
   rotationStatus.textContent = "Round complete · Select End session to stop the metronome";
-  pdfCountdown.textContent = "Target tempo";
+  pdfCountdown.textContent = "Section complete";
+  totalSessionCountdown.textContent = "Total time complete";
   button.disabled = true;
   startSessionButton.textContent = "Session complete";
   startSessionButton.disabled = true;
@@ -348,6 +453,7 @@ async function finishSession() {
   clearTimeout(rotationTimer);
   clearInterval(countdownTimer);
   clearTimeout(rampTimer);
+  clearTotalSessionTimers();
   stopDynamicsPractice();
   clearInterval(visualMetronomeTimer);
   await audioContext?.suspend();
@@ -360,6 +466,7 @@ async function finishSession() {
   collectionCount.textContent = "Every PDF in this round has been displayed.";
   rotationStatus.textContent = "Press Start session to begin a new round";
   pdfCountdown.textContent = "Round complete";
+  totalSessionCountdown.textContent = "No session active";
   button.disabled = true;
   startSessionButton.textContent = "Start session";
   startSessionButton.disabled = false;
@@ -385,14 +492,15 @@ function shuffle(items) {
 }
 
 async function startNewRound() {
-  if (!selectedFolderPdfs.length) {
+  const activePdfs = getActivePdfs();
+  if (!activePdfs.length) {
     playlist = [];
     playlistIndex = 0;
     return;
   }
-  playlist = shuffle(selectedFolderPdfs);
+  playlist = shuffle(activePdfs);
   playlistIndex = 0;
-  if (totalSessionSeconds !== null) {
+  if (totalSessionSeconds !== null && practiceMode === "sections") {
     if (sessionDurationPlan.length !== playlist.length) sessionDurationPlan = calculateSessionDurations(playlist.length);
     playlist = playlist.map((item, index) => ({ ...item, durationSeconds: sessionDurationPlan[index] }));
   }
@@ -406,12 +514,21 @@ function startCountdown() {
   const endsAt = Date.now() + remainingMs;
   const updateCountdown = () => {
     const secondsLeft = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
-    rotationStatus.textContent = `Next PDF in ${secondsLeft}s · ${playlist.length - playlistIndex} remaining this round`;
-    pdfCountdown.textContent = `${secondsLeft}s left`;
+    rotationStatus.textContent = practiceMode === "single"
+      ? "Tempo and dynamics refresh in " + secondsLeft + "s"
+      : "Next PDF in " + secondsLeft + "s · " + (playlist.length - playlistIndex) + " remaining this round";
+    pdfCountdown.textContent = "Section: " + secondsLeft + "s left";
   };
   updateCountdown();
   countdownTimer = setInterval(updateCountdown, 250);
   rotationTimer = setTimeout(showNextPdf, remainingMs);
+}
+
+function refreshSinglePdfPractice() {
+  resetSectionClock();
+  applyTempoForNewPdf();
+  startDynamicsPractice();
+  startCountdown();
 }
 
 async function renderPage(page) {
@@ -437,6 +554,10 @@ async function showNextPdf() {
   button.firstChild.textContent = "Loading… ";
   try {
     if (playlistIndex >= playlist.length && playlist.length) {
+      if (practiceMode === "single") {
+        refreshSinglePdfPractice();
+        return;
+      }
       await completeRound();
       return;
     }
@@ -470,7 +591,9 @@ async function showNextPdf() {
     startDynamicsPractice();
     pageControls.hidden = false;
     fileName.textContent = result.name;
-    collectionCount.textContent = `${playlist.length} PDF${playlist.length === 1 ? "" : "s"} in your collection · Round position ${playlistIndex + 1} of ${playlist.length}`;
+    collectionCount.textContent = practiceMode === "single"
+      ? "One Section · tempo and dynamics refresh every interval"
+      : playlist.length + " PDF" + (playlist.length === 1 ? "" : "s") + " in your collection · Round position " + (playlistIndex + 1) + " of " + playlist.length;
     playlistIndex += 1;
     startCountdown();
   } catch (error) {
@@ -478,24 +601,28 @@ async function showNextPdf() {
     collectionCount.textContent = "Try choosing the folder again, then start a new session.";
   } finally {
     button.disabled = isStopped;
-    button.firstChild.textContent = "Next now ";
+    button.firstChild.textContent = practiceMode === "single" ? "Refresh now " : "Next now ";
   }
 }
 
 startSessionButton.addEventListener("click", async () => {
   if (sessionStarted) return;
-  if (!selectedFolderPdfs.length) {
-    folderStatus.textContent = "Choose a folder containing PDFs before starting";
+  if (!getActivePdfs().length) {
+    folderStatus.textContent = practiceMode === "single"
+      ? "Choose a PDF to practice before starting"
+      : "Choose a folder containing PDFs before starting";
     folderButton.focus();
     return;
   }
   if (!(await prepareSessionDurationPlan())) return;
-  if (totalSessionSeconds === null && methodMayBuildUp() && displayDurationSeconds < 60) {
+  if ((practiceMode === "single" || totalSessionSeconds === null) && methodMayBuildUp() && displayDurationSeconds < 60) {
     showBuildUpDurationError();
     return;
   }
   sessionStarted = true;
   isStopped = false;
+  resetTotalSessionClock();
+  startTotalSessionCountdown();
   showPracticeView();
   playlist = [];
   playlistIndex = 0;
@@ -524,18 +651,23 @@ stopButton.addEventListener("click", async () => {
     clearTimeout(rotationTimer);
     clearInterval(countdownTimer);
     pauseSectionClock();
+    pauseTotalSessionClock();
     clearTimeout(rampTimer);
+    clearTotalSessionTimers();
+    totalSessionCountdown.textContent = "Total time: paused";
     button.disabled = true;
     stopButton.textContent = "Resume session";
     stopButton.classList.add("resume");
     endSessionButton.hidden = false;
     rotationStatus.textContent = "PDF rotation paused · Metronome continues";
-    pdfCountdown.textContent = "PDF paused";
+    pdfCountdown.textContent = "Section: paused";
     return;
   }
 
   isStopped = false;
   resumeSectionClock();
+  resumeTotalSessionClock();
+  startTotalSessionCountdown();
   if (activeTempoMethod === "build-up") startBuildUp();
   button.disabled = false;
   stopButton.textContent = "Stop session";
@@ -557,9 +689,15 @@ durationForm.addEventListener("submit", (event) => {
     return;
   }
   displayDurationSeconds = requestedDuration;
-  totalSessionSeconds = null;
-  sessionDurationPlan = [];
-  totalSessionStatus.textContent = "Using manual duration";
+  if (practiceMode === "sections") {
+    totalSessionSeconds = null;
+    sessionDurationPlan = [];
+    totalSessionStatus.textContent = "Using manual duration";
+  } else {
+    totalSessionStatus.textContent = totalSessionSeconds === null
+      ? "Set total time for a second timer"
+      : "Total timer: " + Math.round(totalSessionSeconds / 60) + " minutes";
+  }
   startCountdown();
 });
 totalSessionForm.addEventListener("submit", async (event) => {
@@ -575,8 +713,23 @@ totalSessionForm.addEventListener("submit", async (event) => {
     return;
   }
   totalSessionSeconds = Math.round(requestedMinutes * 60);
+  if (practiceMode === "single") {
+    sessionDurationPlan = [];
+    totalSessionStatus.textContent = "Total timer: " + Math.round(totalSessionSeconds / 60) + " minutes";
+    return;
+  }
   if (!(await prepareSessionDurationPlan())) return;
-  if (totalSessionSeconds > 0) durationInput.value = Math.floor(totalSessionSeconds / (sessionDurationPlan.length || 1));
+  durationInput.value = Math.floor(totalSessionSeconds / (sessionDurationPlan.length || 1));
+});
+practiceModeInput.addEventListener("change", async () => {
+  if (sessionStarted) return;
+  practiceMode = practiceModeInput.value;
+  updatePracticeModeUi();
+  if (practiceMode === "sections" && totalSessionSeconds !== null) await prepareSessionDurationPlan();
+});
+singlePdfInput.addEventListener("change", () => {
+  selectedSinglePdf = selectedFolderPdfs[Number(singlePdfInput.value)] ?? null;
+  singlePdfStatus.textContent = selectedSinglePdf ? "Selected: " + selectedSinglePdf.name : "Choose a PDF";
 });
 folderButton.addEventListener("click", () => folderInput.click());
 folderInput.addEventListener("change", async () => {
@@ -598,7 +751,10 @@ folderInput.addEventListener("change", async () => {
     }
   }
   applyPracticeSettings(settings, "practice-settings.json");
-  if (totalSessionSeconds !== null) await prepareSessionDurationPlan();
+  sectionPdfs = selectedFolderPdfs.filter(isSectionPdf);
+  populateSinglePdfPicker();
+  updatePracticeModeUi();
+  if (totalSessionSeconds !== null && practiceMode === "sections") await prepareSessionDurationPlan();
 
   if (!selectedFolderPdfs.length) {
     folderStatus.textContent = "No PDFs found — choose another folder";
@@ -610,7 +766,9 @@ folderInput.addEventListener("change", async () => {
   }
 
   const folderName = selectedFolderPdfs[0].file.webkitRelativePath.split("/")[0];
-  folderStatus.textContent = `${selectedFolderPdfs.length} PDFs from ${folderName}`;
+  folderStatus.textContent = sectionPdfs.length
+    ? sectionPdfs.length + " section PDFs from " + folderName
+    : selectedFolderPdfs.length + " PDFs from " + folderName;
   playlist = [];
   playlistIndex = 0;
   clearTimeout(rotationTimer);
