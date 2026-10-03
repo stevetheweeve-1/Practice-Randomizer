@@ -52,6 +52,31 @@ All three values are required. `minBpm` and `maxBpm` must be whole numbers from
 1 to 300, with the minimum no greater than the maximum. The time signature must
 use a numerator from 1 to 32 and a denominator of 1, 2, 4, 8, or 16. `targetTempo` is optional and must be a whole number from 1 to 300. If it is omitted, the app uses the value in its Target tempo field (60 BPM by default). The metronome continues at the target BPM after the PDF round completes, until **End session** is selected.
 
+## Section Editor
+
+Use **Open Section Editor** after choosing a folder to turn a whole-piece PDF into practice sections. Select the source PDF, enter a section name, click **Add fragment**, and drag around each line in reading order. Use the page buttons when a section spans pages. The practice display stacks the saved fragments vertically. The list below the page controls their reading order; use ↑, ↓, or **Remove** to adjust a draft before saving.
+
+Click **Save section** to keep the section in the current browser session, then **Download practice-sections.json**. Put that downloaded file at the top level of the same folder as the source PDF. When you select the folder again, the app imports it automatically; choose **Saved sections (random)** as the practice mode to rotate those sections.
+
+The file format is:
+
+```json
+{
+  "version": 1,
+  "sections": [
+    {
+      "name": "Measures 9–20",
+      "source": "Full Piece/prelude.pdf",
+      "fragments": [
+        { "page": 1, "x": 0.1, "y": 0.18, "width": 0.8, "height": 0.12 }
+      ]
+    }
+  ]
+}
+```
+
+The `source` path is relative to the folder you choose. Coordinates are stored as fractions of a page, which makes the file portable across screen sizes. Browser security prevents the app from writing directly back into the chosen folder, which is why it downloads the JSON file.
+
 Use **Tempo method** to choose **Random BPM**, **Half target**, or **Build up**. Build up requires a display time of at least 60 seconds. It resets to the low BPM whenever a new PDF appears, then calculates equal 30-second increases that reach the high BPM before the next PDF. Tempo method is chosen in the app and is not read from `practice-settings.json`; it defaults to Random BPM. If the file is absent or invalid, the app uses its normal starting values.
 
 Turn **Dynamics practice** on to display one randomly selected instruction for each PDF: piano, mezzo-piano, mezzo-forte, forte, crescendo, or decrescendo. The instruction remains until the next PDF appears. Dynamics practice defaults to off and is configured only in the app.

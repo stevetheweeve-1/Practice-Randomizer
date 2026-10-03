@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Random PDF</title>
-    <link rel="stylesheet" href="style.css?v=setup-screen-1" />
+    <link rel="stylesheet" href="style.css?v=section-editor-draw-1" />
   </head>
   <body data-view="setup">
     <main>
@@ -73,6 +73,7 @@
           <select id="practice-mode-input">
             <option value="sections">Sections (random)</option>
             <option value="single">One Section</option>
+            <option value="saved-sections">Saved sections (random)</option>
           </select>
           <span id="practice-mode-status">Choose a folder first</span>
         </div>
@@ -81,6 +82,40 @@
           <select id="single-pdf-input" disabled></select>
           <span id="single-pdf-status">Choose a folder first</span>
         </div>
+        <section id="section-editor" class="section-editor" hidden>
+          <div class="section-editor-heading">
+            <div>
+              <p class="label">SECTION EDITOR</p>
+              <h2>Build sections from a whole-piece PDF</h2>
+            </div>
+            <button id="close-section-editor" type="button">Close editor</button>
+          </div>
+          <p class="section-editor-help">Choose a source PDF, name a section, then drag a rectangle around each line or fragment in reading order.</p>
+          <div class="section-editor-controls">
+            <label for="section-source-input">Source PDF</label>
+            <select id="section-source-input"></select>
+            <label for="section-name-input">Section name</label>
+            <input id="section-name-input" type="text" placeholder="e.g. Measures 9–20" />
+            <button id="add-fragment-button" type="button">Add fragment</button>
+          </div>
+          <div class="section-editor-canvas-wrap">
+            <div id="section-editor-loading" class="loading" hidden>Rendering PDF…</div>
+            <canvas id="section-editor-canvas"></canvas>
+            <div id="section-editor-overlay" class="section-editor-overlay" aria-label="Drag to select a PDF fragment"></div>
+          </div>
+          <div class="section-editor-page-controls">
+            <button id="section-editor-previous-page" type="button">← Previous page</button>
+            <span id="section-editor-page-number">Choose a PDF</span>
+            <button id="section-editor-next-page" type="button">Next page →</button>
+          </div>
+          <ol id="section-fragment-list" class="section-fragment-list"></ol>
+          <div class="section-editor-actions">
+            <button id="save-section-button" type="button">Save section</button>
+            <button id="export-sections-button" type="button">Download practice-sections.json</button>
+          </div>
+          <p id="section-editor-status" class="section-editor-status">Choose a folder, then open the editor.</p>
+        </section>
+        <button id="open-section-editor" class="open-section-editor" type="button" disabled>Open Section Editor</button>
         <form id="duration-form" class="duration-form">
           <label id="duration-label" for="duration-input">Display each PDF for</label>
           <input id="duration-input" type="number" min="1" max="3600" value="60" inputmode="numeric" required />
@@ -131,6 +166,6 @@
         </div>
       </section>
     </main>
-    <script type="module" src="app.js?v=single-pdf-timers-1"></script>
+    <script type="module" src="app.js?v=section-editor-source-file-1"></script>
   </body>
 </html>

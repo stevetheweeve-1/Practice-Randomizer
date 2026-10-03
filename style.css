@@ -85,3 +85,23 @@ body[data-view="practice"] .setup-heading { display: none; }
 .practice-mode-control select, .single-pdf-picker select { max-width: min(320px, 100%); border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; padding: 7px; }
 .single-pdf-picker select { min-width: min(280px, 100%); }
 .session-timers { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+
+
+.section-editor { margin-top: 22px; padding: 22px; border: 1px solid #9da891; border-radius: 12px; background: #eef0e6; }
+.section-editor-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.section-editor-heading h2 { margin: 0; font-size: 1.35rem; }
+.section-editor-heading button, .section-editor-actions button, .section-editor-controls button, .section-editor-page-controls button, .section-fragment-list button, .open-section-editor { padding: 8px 12px; border-radius: 6px; background: #66745d; font-size: .63rem; }
+.section-editor-help, .section-editor-status { color: #536055; font-size: .72rem; line-height: 1.55; }
+.section-editor-controls, .section-editor-actions, .section-editor-page-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
+.section-editor-controls select, .section-editor-controls input { max-width: min(280px, 100%); border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; padding: 7px; }
+.section-editor-controls .active { background: #8d4b3d; }
+.section-editor-canvas-wrap { position: relative; width: fit-content; max-width: 100%; margin: 18px auto 0; box-shadow: 0 5px 20px #25302655; }
+#section-editor-canvas { max-width: 100%; height: auto; display: block; }
+.section-editor-overlay { position: absolute; inset: 0; z-index: 2; touch-action: none; cursor: crosshair; pointer-events: auto; }
+.section-fragment-marker, .section-editor-selection { position: absolute; display: grid; place-items: center; border: 2px solid #d85d31; background: #e97f4833; color: #8d4b3d; font: 700 .72rem "DM Mono", monospace; pointer-events: none; }
+.section-editor-selection { border-style: dashed; }
+.section-fragment-list { margin: 16px 0 0; padding-left: 22px; color: #536055; font-size: .7rem; }
+.section-fragment-list li { display: flex; align-items: center; gap: 8px; margin: 7px 0; }
+.section-fragment-list button { padding: 4px 7px; background: #8d4b3d; }
+.open-section-editor { margin-top: 14px; }
+@media (max-width: 600px) { .section-editor { padding: 16px; } .section-editor-heading { flex-direction: column; } }
