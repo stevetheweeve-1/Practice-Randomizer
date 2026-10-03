@@ -72,6 +72,8 @@ let targetTempo = Number(targetTempoInput.value);
 let tempoMethod = "random";
 let activeTempoMethod = "random";
 let rampTimer;
+let sectionElapsedMs = 0;
+let sectionActiveSince = null;
 let dynamicsEnabled = false;
 const defaultPracticeSettings = Object.freeze({
   minimumBpm,
@@ -170,22 +172,50 @@ function updateTempoMethodStatus(prefix = "Active") {
   tempoMethodStatus.textContent = `${prefix}: ${tempoMethodLabels[activeTempoMethod]}`;
 }
 
+function resetSectionClock() {
+  sectionElapsedMs = 0;
+  sectionActiveSince = Date.now();
+}
+
+function pauseSectionClock() {
+  if (sectionActiveSince === null) return;
+  sectionElapsedMs += Date.now() - sectionActiveSince;
+  sectionActiveSince = null;
+}
+
+function resumeSectionClock() {
+  sectionActiveSince = Date.now();
+}
+
+function getSectionElapsedMs() {
+  return sectionElapsedMs + (sectionActiveSince === null ? 0 : Date.now() - sectionActiveSince);
+}
+
+function getSectionRemainingMs() {
+  return Math.max(0, (currentDisplayDurationSeconds * 1000) - getSectionElapsedMs());
+}
+
 function startBuildUp() {
+  clearTimeout(rampTimer);
   const transitions = Math.ceil(currentDisplayDurationSeconds / 30) - 1;
-  let stepIndex = 0;
-  setCurrentTempo(minimumBpm, tempoMethodLabels["build-up"]);
-  clearInterval(rampTimer);
-  rampTimer = setInterval(() => {
-    if (!sessionStarted || activeTempoMethod !== "build-up" || stepIndex >= transitions) return;
-    stepIndex += 1;
-    const progress = stepIndex / transitions;
+
+  const scheduleTempo = () => {
+    if (!sessionStarted || isStopped || activeTempoMethod !== "build-up") return;
+    const elapsedMs = getSectionElapsedMs();
+    const stepIndex = Math.min(transitions, Math.floor(elapsedMs / 30000));
+    const progress = transitions > 0 ? stepIndex / transitions : 0;
     const nextTempo = Number((minimumBpm + ((maximumBpm - minimumBpm) * progress)).toFixed(1));
     setCurrentTempo(nextTempo, tempoMethodLabels["build-up"]);
-  }, 30000);
+    if (stepIndex >= transitions) return;
+    const nextStepAtMs = (stepIndex + 1) * 30000;
+    rampTimer = setTimeout(scheduleTempo, Math.max(1, nextStepAtMs - elapsedMs));
+  };
+
+  scheduleTempo();
 }
 
 function beginTempoMethod() {
-  clearInterval(rampTimer);
+  clearTimeout(rampTimer);
   activeTempoMethod = tempoMethod;
   updateTempoMethodStatus();
 }
@@ -290,7 +320,7 @@ async function completeRound() {
 
   clearTimeout(rotationTimer);
   clearInterval(countdownTimer);
-  clearInterval(rampTimer);
+  clearTimeout(rampTimer);
   stopDynamicsPractice();
   isStopped = true;
   sessionStarted = false;
@@ -317,7 +347,7 @@ async function finishSession() {
   sessionStarted = false;
   clearTimeout(rotationTimer);
   clearInterval(countdownTimer);
-  clearInterval(rampTimer);
+  clearTimeout(rampTimer);
   stopDynamicsPractice();
   clearInterval(visualMetronomeTimer);
   await audioContext?.suspend();
@@ -372,7 +402,8 @@ function startCountdown() {
   if (isStopped) return;
   clearTimeout(rotationTimer);
   clearInterval(countdownTimer);
-  const endsAt = Date.now() + currentDisplayDurationSeconds * 1000;
+  const remainingMs = getSectionRemainingMs();
+  const endsAt = Date.now() + remainingMs;
   const updateCountdown = () => {
     const secondsLeft = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
     rotationStatus.textContent = `Next PDF in ${secondsLeft}s · ${playlist.length - playlistIndex} remaining this round`;
@@ -380,7 +411,7 @@ function startCountdown() {
   };
   updateCountdown();
   countdownTimer = setInterval(updateCountdown, 250);
-  rotationTimer = setTimeout(showNextPdf, currentDisplayDurationSeconds * 1000);
+  rotationTimer = setTimeout(showNextPdf, remainingMs);
 }
 
 async function renderPage(page) {
@@ -434,6 +465,7 @@ async function showNextPdf() {
       : encodeURI(result.pdf);
     documentPdf = await pdfjsLib.getDocument(source).promise;
     await renderPage(1);
+    resetSectionClock();
     applyTempoForNewPdf();
     startDynamicsPractice();
     pageControls.hidden = false;
@@ -491,6 +523,8 @@ stopButton.addEventListener("click", async () => {
     isStopped = true;
     clearTimeout(rotationTimer);
     clearInterval(countdownTimer);
+    pauseSectionClock();
+    clearTimeout(rampTimer);
     button.disabled = true;
     stopButton.textContent = "Resume session";
     stopButton.classList.add("resume");
@@ -501,6 +535,8 @@ stopButton.addEventListener("click", async () => {
   }
 
   isStopped = false;
+  resumeSectionClock();
+  if (activeTempoMethod === "build-up") startBuildUp();
   button.disabled = false;
   stopButton.textContent = "Stop session";
   stopButton.classList.remove("resume");
