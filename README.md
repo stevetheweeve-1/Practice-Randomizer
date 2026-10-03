@@ -22,7 +22,7 @@ Use **Total session time** to set the length of the whole round in minutes. The 
 
 Press **Sound on** once to start the metronome. Press **Sound off** to silence the clicks while keeping the visual beat indicator running. Browsers require this one interaction before allowing audio playback.
 
-Use **Stop session** to pause PDF rotation while the metronome continues. Press **Resume session** to continue from the displayed PDF.
+Use **Stop session** to pause PDF rotation while the metronome continues at its current tempo. Press **Resume session** to continue the displayed PDF with its remaining time and Build up progression.
 
 Choose the folder and practice settings on the setup screen first. Starting the session switches to a focused PDF practice screen; use **End session** to return to setup.
 
