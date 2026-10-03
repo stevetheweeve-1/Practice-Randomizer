@@ -18,7 +18,9 @@ Set the number of seconds in **Display each PDF for** and press **Apply** to cha
 
 Use **Choose PDF folder** to select any folder on your computer. Its PDFs become the active rotation for the current browser session; no files are uploaded or copied.
 
-Use **Total session time** to set the length of the whole round in minutes. The app divides that time across every PDF, distributing any extra seconds so the total is exact. Press **Apply** beside the per-PDF duration to return to manual timing. With the Build up tempo method, every calculated PDF duration must be at least 60 seconds.
+For a piece with both sectional and whole-piece practice, keep one parent folder containing `practice-settings.json`, a `Sections/` subfolder, and optionally a `Full Piece/` subfolder. **Sections (random)** rotates PDFs in `Sections/`; **One Section** lets you choose any PDF in that same parent folder and keeps it displayed while tempo and dynamics refresh each interval.
+
+Use **Total session time** to set the length of the whole round in minutes. The app divides that time across every PDF, distributing any extra seconds so the total is exact. In **One Section** mode, it instead sets the total practice duration and shows a second countdown timer. Press **Apply** beside the per-PDF duration to return to manual timing. With the Build up tempo method, every calculated PDF duration must be at least 60 seconds.
 
 Press **Sound on** once to start the metronome. Press **Sound off** to silence the clicks while keeping the visual beat indicator running. Browsers require this one interaction before allowing audio playback.
 

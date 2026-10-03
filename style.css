@@ -81,3 +81,7 @@ body[data-view="practice"] .start-session-button { display: none; }
 .setup-heading h1 { font-size: clamp(2.3rem, 6vw, 4.2rem); line-height: .96; margin: 0; }
 .setup-heading p:last-child { max-width: 530px; color: #536055; line-height: 1.7; margin: 16px 0 0; }
 body[data-view="practice"] .setup-heading { display: none; }
+.practice-mode-control, .single-pdf-picker { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
+.practice-mode-control select, .single-pdf-picker select { max-width: min(320px, 100%); border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; padding: 7px; }
+.single-pdf-picker select { min-width: min(280px, 100%); }
+.session-timers { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }

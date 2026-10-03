@@ -15,7 +15,10 @@
           <button id="stop-button" class="stop-button" type="button" disabled>Stop session</button>
           <button id="end-session-button" class="end-session-button" type="button" hidden>End session</button>
         </div>
-        <p id="pdf-countdown" class="pdf-countdown top-countdown">Session not started</p>
+        <div class="session-timers">
+          <p id="pdf-countdown" class="pdf-countdown top-countdown">Section not started</p>
+          <p id="total-session-countdown" class="pdf-countdown top-countdown">Total time: no limit</p>
+        </div>
       </div>
       <section class="viewer-card" aria-live="polite">
         <div class="viewer-heading">
@@ -65,8 +68,21 @@
           <button id="folder-button" type="button">Choose PDF folder</button>
           <span id="folder-status">Choose a folder containing PDFs</span>
         </div>
+        <div class="practice-mode-control">
+          <label for="practice-mode-input">Practice mode</label>
+          <select id="practice-mode-input">
+            <option value="sections">Sections (random)</option>
+            <option value="single">One Section</option>
+          </select>
+          <span id="practice-mode-status">Choose a folder first</span>
+        </div>
+        <div id="single-pdf-picker" class="single-pdf-picker" hidden>
+          <label for="single-pdf-input">PDF to practice</label>
+          <select id="single-pdf-input" disabled></select>
+          <span id="single-pdf-status">Choose a folder first</span>
+        </div>
         <form id="duration-form" class="duration-form">
-          <label for="duration-input">Display each PDF for</label>
+          <label id="duration-label" for="duration-input">Display each PDF for</label>
           <input id="duration-input" type="number" min="1" max="3600" value="60" inputmode="numeric" required />
           <span>seconds</span>
           <button type="submit">Apply</button>
@@ -115,6 +131,6 @@
         </div>
       </section>
     </main>
-    <script type="module" src="app.js?v=build-up-pause-1"></script>
+    <script type="module" src="app.js?v=single-pdf-timers-1"></script>
   </body>
 </html>
