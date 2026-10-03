@@ -85,9 +85,8 @@ let audioContext;
 let visualMetronomeTimer;
 let currentBpm = 60;
 let selectedFolderPdfs = [];
-let sectionPdfs = [];
 let selectedSinglePdf = null;
-let practiceMode = "sections";
+let practiceMode = "whole-piece";
 let isStopped = true;
 let sessionStarted = false;
 let metronomeEnabled = true;
@@ -131,32 +130,27 @@ function showPracticeView() {
   document.body.dataset.view = "practice";
 }
 
-function isSectionPdf(item) {
-  const pathParts = item.file.webkitRelativePath.split("/").slice(1, -1);
-  return pathParts.some((part) => part.toLowerCase() === "sections");
-}
-
 function getActivePdfs() {
-  if (practiceMode === "single") return selectedSinglePdf ? [selectedSinglePdf] : [];
+  if (practiceMode === "single-section") return selectedSinglePdf ? [selectedSinglePdf] : [];
   if (practiceMode === "saved-sections") return savedSections;
-  return sectionPdfs.length ? sectionPdfs : selectedFolderPdfs;
+  return selectedFolderPdfs;
 }
 
 function populateSinglePdfPicker() {
   singlePdfInput.replaceChildren();
-  selectedFolderPdfs.forEach((item, index) => {
+  savedSections.forEach((section, index) => {
     const option = document.createElement("option");
     option.value = String(index);
-    option.textContent = item.file.webkitRelativePath.split("/").slice(1).join(" / ");
+    option.textContent = section.name;
     singlePdfInput.append(option);
   });
-  singlePdfInput.disabled = !selectedFolderPdfs.length;
-  selectedSinglePdf = selectedFolderPdfs[0] ?? null;
-  singlePdfStatus.textContent = selectedSinglePdf ? "Selected: " + selectedSinglePdf.name : "Choose a folder first";
+  singlePdfInput.disabled = !savedSections.length;
+  selectedSinglePdf = savedSections[0] ?? null;
+  singlePdfStatus.textContent = selectedSinglePdf ? "Selected: " + selectedSinglePdf.name : "Create or import saved sections first";
 }
 
 function updatePracticeModeUi() {
-  const isSingle = practiceMode === "single";
+  const isSingle = practiceMode === "single-section";
   singlePdfPicker.hidden = !isSingle;
   const isSavedSections = practiceMode === "saved-sections";
   totalSessionForm.hidden = false;
@@ -170,14 +164,14 @@ function updatePracticeModeUi() {
       : "Create or import saved sections with the Section Editor";
   } else if (isSingle) {
     sessionDurationPlan = [];
-    practiceModeStatus.textContent = "Repeat one section; tempo and dynamics refresh each interval";
+    practiceModeStatus.textContent = "Repeat one saved section; tempo and dynamics refresh each interval";
     totalSessionStatus.textContent = totalSessionSeconds === null
       ? "Optional second timer"
       : "Total timer: " + Math.round(totalSessionSeconds / 60) + " minutes";
   } else {
-    practiceModeStatus.textContent = sectionPdfs.length
-      ? sectionPdfs.length + " PDFs in the Sections folder"
-      : "No Sections folder found; all PDFs will rotate";
+    practiceModeStatus.textContent = selectedFolderPdfs.length
+      ? selectedFolderPdfs.length + " whole-piece PDF" + (selectedFolderPdfs.length === 1 ? "" : "s") + " ready"
+      : "Choose a folder containing a whole-piece PDF";
   }
 }
 
@@ -229,7 +223,7 @@ function calculateSessionDurations(pdfCount) {
 }
 
 async function prepareSessionDurationPlan() {
-  if (totalSessionSeconds === null || practiceMode === "single") {
+  if (totalSessionSeconds === null || practiceMode === "single-section") {
     sessionDurationPlan = [];
     return true;
   }
@@ -285,7 +279,7 @@ function getSectionRemainingMs() {
 }
 
 function hasTotalSessionLimit() {
-  return practiceMode === "single" && totalSessionSeconds !== null;
+  return practiceMode === "single-section" && totalSessionSeconds !== null;
 }
 
 function resetTotalSessionClock() {
@@ -533,7 +527,7 @@ async function startNewRound() {
   }
   playlist = shuffle(activePdfs);
   playlistIndex = 0;
-  if (totalSessionSeconds !== null && practiceMode !== "single") {
+  if (totalSessionSeconds !== null && practiceMode !== "single-section") {
     if (sessionDurationPlan.length !== playlist.length) sessionDurationPlan = calculateSessionDurations(playlist.length);
     playlist = playlist.map((item, index) => ({ ...item, durationSeconds: sessionDurationPlan[index] }));
   }
@@ -547,7 +541,7 @@ function startCountdown() {
   const endsAt = Date.now() + remainingMs;
   const updateCountdown = () => {
     const secondsLeft = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
-    rotationStatus.textContent = practiceMode === "single"
+    rotationStatus.textContent = practiceMode === "single-section"
       ? "Tempo and dynamics refresh in " + secondsLeft + "s"
       : "Next PDF in " + secondsLeft + "s · " + (playlist.length - playlistIndex) + " remaining this round";
     pdfCountdown.textContent = "Section: " + secondsLeft + "s left";
@@ -726,7 +720,7 @@ async function showNextPdf() {
   button.firstChild.textContent = "Loading… ";
   try {
     if (playlistIndex >= playlist.length && playlist.length) {
-      if (practiceMode === "single") {
+      if (practiceMode === "single-section") {
         refreshSinglePdfPractice();
         return;
       }
@@ -766,8 +760,8 @@ async function showNextPdf() {
     startDynamicsPractice();
     pageControls.hidden = result.type === "saved-section";
     fileName.textContent = result.name;
-    collectionCount.textContent = practiceMode === "single"
-      ? "One Section · tempo and dynamics refresh every interval"
+    collectionCount.textContent = practiceMode === "single-section"
+      ? "One section · tempo and dynamics refresh every interval"
       : practiceMode === "saved-sections"
         ? playlist.length + " saved section" + (playlist.length === 1 ? "" : "s") + " · Round position " + (playlistIndex + 1) + " of " + playlist.length
         : playlist.length + " PDF" + (playlist.length === 1 ? "" : "s") + " in your collection · Round position " + (playlistIndex + 1) + " of " + playlist.length;
@@ -781,21 +775,21 @@ async function showNextPdf() {
     rotationStatus.textContent = "Load error: " + detail;
   } finally {
     button.disabled = isStopped;
-    button.firstChild.textContent = practiceMode === "single" ? "Refresh now " : "Next now ";
+    button.firstChild.textContent = practiceMode === "single-section" ? "Refresh now " : "Next now ";
   }
 }
 
 startSessionButton.addEventListener("click", async () => {
   if (sessionStarted) return;
   if (!getActivePdfs().length) {
-    folderStatus.textContent = practiceMode === "single"
-      ? "Choose a PDF to practice before starting"
+    folderStatus.textContent = practiceMode === "single-section"
+      ? "Choose a saved section before starting"
       : "Choose a folder containing PDFs before starting";
     folderButton.focus();
     return;
   }
   if (!(await prepareSessionDurationPlan())) return;
-  if ((practiceMode === "single" || totalSessionSeconds === null) && methodMayBuildUp() && displayDurationSeconds < 60) {
+  if ((practiceMode === "single-section" || totalSessionSeconds === null) && methodMayBuildUp() && displayDurationSeconds < 60) {
     showBuildUpDurationError();
     return;
   }
@@ -869,7 +863,7 @@ durationForm.addEventListener("submit", (event) => {
     return;
   }
   displayDurationSeconds = requestedDuration;
-  if (practiceMode !== "single") {
+  if (practiceMode !== "single-section") {
     totalSessionSeconds = null;
     sessionDurationPlan = [];
     totalSessionStatus.textContent = "Using manual duration";
@@ -893,7 +887,7 @@ totalSessionForm.addEventListener("submit", async (event) => {
     return;
   }
   totalSessionSeconds = Math.round(requestedMinutes * 60);
-  if (practiceMode === "single") {
+  if (practiceMode === "single-section") {
     sessionDurationPlan = [];
     totalSessionStatus.textContent = "Total timer: " + Math.round(totalSessionSeconds / 60) + " minutes";
     return;
@@ -905,11 +899,11 @@ practiceModeInput.addEventListener("change", async () => {
   if (sessionStarted) return;
   practiceMode = practiceModeInput.value;
   updatePracticeModeUi();
-  if (practiceMode !== "single" && totalSessionSeconds !== null) await prepareSessionDurationPlan();
+  if (practiceMode !== "single-section" && totalSessionSeconds !== null) await prepareSessionDurationPlan();
 });
 singlePdfInput.addEventListener("change", () => {
-  selectedSinglePdf = selectedFolderPdfs[Number(singlePdfInput.value)] ?? null;
-  singlePdfStatus.textContent = selectedSinglePdf ? "Selected: " + selectedSinglePdf.name : "Choose a PDF";
+  selectedSinglePdf = savedSections[Number(singlePdfInput.value)] ?? null;
+  singlePdfStatus.textContent = selectedSinglePdf ? "Selected: " + selectedSinglePdf.name : "Choose a saved section";
 });
 folderButton.addEventListener("click", () => folderInput.click());
 folderInput.addEventListener("change", async () => {
@@ -948,11 +942,10 @@ folderInput.addEventListener("change", async () => {
       savedSections = [];
     }
   }
-  sectionPdfs = selectedFolderPdfs.filter(isSectionPdf);
   populateSinglePdfPicker();
   refreshSectionSourceList();
   updatePracticeModeUi();
-  if (totalSessionSeconds !== null && practiceMode !== "single") await prepareSessionDurationPlan();
+  if (totalSessionSeconds !== null && practiceMode !== "single-section") await prepareSessionDurationPlan();
 
   if (!selectedFolderPdfs.length) {
     folderStatus.textContent = "No PDFs found — choose another folder";
@@ -964,9 +957,7 @@ folderInput.addEventListener("change", async () => {
   }
 
   const folderName = selectedFolderPdfs[0].file.webkitRelativePath.split("/")[0];
-  folderStatus.textContent = sectionPdfs.length
-    ? sectionPdfs.length + " section PDFs from " + folderName
-    : selectedFolderPdfs.length + " PDFs from " + folderName;
+  folderStatus.textContent = selectedFolderPdfs.length + " whole-piece PDF" + (selectedFolderPdfs.length === 1 ? "" : "s") + " from " + folderName;
   if (savedSections.length) sectionEditorStatus.textContent = savedSections.length + " saved section" + (savedSections.length === 1 ? "" : "s") + " imported from practice-sections.json";
   playlist = [];
   playlistIndex = 0;
@@ -1094,7 +1085,7 @@ saveSectionButton.addEventListener("click", () => {
 });
 exportSectionsButton.addEventListener("click", () => {
   if (!savedSections.length) {
-    sectionEditorStatus.textContent = "Save at least one section first.";
+    sectionEditorStatus.textContent = "Save at least one saved section first.";
     return;
   }
   const data = { version: 1, sections: savedSections.map((section) => ({ name: section.name, source: section.sourcePath, fragments: section.fragments })) };
