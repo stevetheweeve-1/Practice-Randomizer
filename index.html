@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Random PDF</title>
-    <link rel="stylesheet" href="style.css?v=setup-screen-1" />
+    <link rel="stylesheet" href="style.css?v=section-editor-draw-1" />
   </head>
   <body data-view="setup">
     <main>
@@ -60,27 +60,62 @@
       <div class="setup-heading">
         <p class="label">Weeve's Practice Randomizer</p>
         <h1>Set up your session</h1>
-        <p>Choose your material and settings, then begin when you are ready.</p>
+        <p>Choose your score and practice settings.</p>
       </div>
       <section class="options-panel">
         <div class="folder-picker">
           <input id="folder-input" type="file" accept="application/pdf,.pdf,application/json,.json" webkitdirectory multiple hidden />
-          <button id="folder-button" type="button">Choose PDF folder</button>
-          <span id="folder-status">Choose a folder containing PDFs</span>
+          <button id="folder-button" type="button">Choose folder</button>
+          <span id="folder-status">Choose the folder containing the score</span>
         </div>
         <div class="practice-mode-control">
           <label for="practice-mode-input">Practice mode</label>
           <select id="practice-mode-input">
-            <option value="sections">Sections (random)</option>
-            <option value="single">One Section</option>
+            <option value="whole-piece">Full score</option>
+            <option value="saved-sections">Saved sections (random)</option>
+            <option value="single-section">One section</option>
           </select>
           <span id="practice-mode-status">Choose a folder first</span>
         </div>
         <div id="single-pdf-picker" class="single-pdf-picker" hidden>
-          <label for="single-pdf-input">PDF to practice</label>
+          <label for="single-pdf-input">Section to practice</label>
           <select id="single-pdf-input" disabled></select>
           <span id="single-pdf-status">Choose a folder first</span>
         </div>
+        <section id="section-editor" class="section-editor" hidden>
+          <div class="section-editor-heading">
+            <div>
+              <p class="label">SECTION EDITOR</p>
+              <h2>Build sections from a full score PDF</h2>
+            </div>
+            <button id="close-section-editor" type="button">Close editor</button>
+          </div>
+          <p class="section-editor-help">Choose a source PDF, name a section, then drag a rectangle around each line or fragment in reading order.</p>
+          <div class="section-editor-controls">
+            <label for="section-source-input">Source PDF</label>
+            <select id="section-source-input"></select>
+            <label for="section-name-input">Section name</label>
+            <input id="section-name-input" type="text" placeholder="e.g. Measures 9–20" />
+            <button id="add-fragment-button" type="button">Add fragment</button>
+          </div>
+          <div class="section-editor-canvas-wrap">
+            <div id="section-editor-loading" class="loading" hidden>Rendering PDF…</div>
+            <canvas id="section-editor-canvas"></canvas>
+            <div id="section-editor-overlay" class="section-editor-overlay" aria-label="Drag to select a PDF fragment"></div>
+          </div>
+          <div class="section-editor-page-controls">
+            <button id="section-editor-previous-page" type="button">← Previous page</button>
+            <span id="section-editor-page-number">Choose a PDF</span>
+            <button id="section-editor-next-page" type="button">Next page →</button>
+          </div>
+          <ol id="section-fragment-list" class="section-fragment-list"></ol>
+          <div class="section-editor-actions">
+            <button id="save-section-button" type="button">Save section</button>
+            <button id="export-sections-button" type="button">Download practice-sections.json</button>
+          </div>
+          <p id="section-editor-status" class="section-editor-status">Choose a folder, then open the editor.</p>
+        </section>
+        <button id="open-section-editor" class="open-section-editor" type="button" disabled>Open Section Editor</button>
         <form id="duration-form" class="duration-form">
           <label id="duration-label" for="duration-input">Display each PDF for</label>
           <input id="duration-input" type="number" min="1" max="3600" value="60" inputmode="numeric" required />
@@ -131,6 +166,6 @@
         </div>
       </section>
     </main>
-    <script type="module" src="app.js?v=single-pdf-timers-1"></script>
+    <script type="module" src="app.js?v=saved-section-modes-1"></script>
   </body>
 </html>

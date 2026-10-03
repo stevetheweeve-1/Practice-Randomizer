@@ -54,6 +54,23 @@ const targetTempoStatus = document.querySelector("#target-tempo-status");
 const tempoMethodForm = document.querySelector("#tempo-method-form");
 const tempoMethodInput = document.querySelector("#tempo-method-input");
 const tempoMethodStatus = document.querySelector("#tempo-method-status");
+const sectionEditor = document.querySelector("#section-editor");
+const openSectionEditorButton = document.querySelector("#open-section-editor");
+const closeSectionEditorButton = document.querySelector("#close-section-editor");
+const sectionSourceInput = document.querySelector("#section-source-input");
+const sectionNameInput = document.querySelector("#section-name-input");
+const addFragmentButton = document.querySelector("#add-fragment-button");
+const sectionEditorCanvas = document.querySelector("#section-editor-canvas");
+const sectionEditorContext = sectionEditorCanvas.getContext("2d");
+const sectionEditorOverlay = document.querySelector("#section-editor-overlay");
+const sectionEditorLoading = document.querySelector("#section-editor-loading");
+const sectionEditorPageNumber = document.querySelector("#section-editor-page-number");
+const sectionEditorPreviousPage = document.querySelector("#section-editor-previous-page");
+const sectionEditorNextPage = document.querySelector("#section-editor-next-page");
+const sectionFragmentList = document.querySelector("#section-fragment-list");
+const saveSectionButton = document.querySelector("#save-section-button");
+const exportSectionsButton = document.querySelector("#export-sections-button");
+const sectionEditorStatus = document.querySelector("#section-editor-status");
 let documentPdf;
 let currentPage = 1;
 let playlist = [];
@@ -68,9 +85,8 @@ let audioContext;
 let visualMetronomeTimer;
 let currentBpm = 60;
 let selectedFolderPdfs = [];
-let sectionPdfs = [];
 let selectedSinglePdf = null;
-let practiceMode = "sections";
+let practiceMode = "whole-piece";
 let isStopped = true;
 let sessionStarted = false;
 let metronomeEnabled = true;
@@ -89,6 +105,14 @@ let totalSessionActiveSince = null;
 let totalSessionTimer;
 let totalSessionCountdownTimer;
 let dynamicsEnabled = false;
+let savedSections = [];
+let editorPdf;
+let editorSourceItem = null;
+let editorPage = 1;
+let draftFragments = [];
+let editorIsDrawing = false;
+let editorDragStart = null;
+let editorSelection = null;
 const defaultPracticeSettings = Object.freeze({
   minimumBpm,
   maximumBpm,
@@ -106,45 +130,52 @@ function showPracticeView() {
   document.body.dataset.view = "practice";
 }
 
-function isSectionPdf(item) {
-  const pathParts = item.file.webkitRelativePath.split("/").slice(1, -1);
-  return pathParts.some((part) => part.toLowerCase() === "sections");
-}
-
 function getActivePdfs() {
-  if (practiceMode === "single") return selectedSinglePdf ? [selectedSinglePdf] : [];
-  return sectionPdfs.length ? sectionPdfs : selectedFolderPdfs;
+  if (practiceMode === "single-section") return selectedSinglePdf ? [selectedSinglePdf] : [];
+  if (practiceMode === "saved-sections") return savedSections;
+  return selectedFolderPdfs;
 }
 
 function populateSinglePdfPicker() {
   singlePdfInput.replaceChildren();
-  selectedFolderPdfs.forEach((item, index) => {
+  savedSections.forEach((section, index) => {
     const option = document.createElement("option");
     option.value = String(index);
-    option.textContent = item.file.webkitRelativePath.split("/").slice(1).join(" / ");
+    option.textContent = section.name;
     singlePdfInput.append(option);
   });
-  singlePdfInput.disabled = !selectedFolderPdfs.length;
-  selectedSinglePdf = selectedFolderPdfs[0] ?? null;
-  singlePdfStatus.textContent = selectedSinglePdf ? "Selected: " + selectedSinglePdf.name : "Choose a folder first";
+  singlePdfInput.disabled = !savedSections.length;
+  selectedSinglePdf = savedSections[0] ?? null;
+  singlePdfStatus.textContent = selectedSinglePdf ? "Selected: " + selectedSinglePdf.name : "Create or import saved sections first";
 }
 
 function updatePracticeModeUi() {
-  const isSingle = practiceMode === "single";
+  const isSingle = practiceMode === "single-section";
   singlePdfPicker.hidden = !isSingle;
+  // The setup layout uses flex, so set an inline display value as well as the
+  // semantic hidden attribute. This guarantees the picker is absent outside
+  // One section mode even if a browser stylesheet overrides [hidden].
+  singlePdfPicker.style.display = isSingle ? "flex" : "none";
+  const isSavedSections = practiceMode === "saved-sections";
   totalSessionForm.hidden = false;
   durationLabel.textContent = isSingle ? "Refresh tempo and dynamics every" : "Display each PDF for";
   button.firstChild.textContent = isSingle ? "Refresh now " : "Next now ";
-  if (isSingle) {
+  if (isSavedSections) {
     sessionDurationPlan = [];
-    practiceModeStatus.textContent = "Repeat one section; tempo and dynamics refresh each interval";
+    totalSessionForm.hidden = false;
+    practiceModeStatus.textContent = savedSections.length
+      ? savedSections.length + " saved section" + (savedSections.length === 1 ? "" : "s") + " ready"
+      : "Create or import saved sections with the Section Editor";
+  } else if (isSingle) {
+    sessionDurationPlan = [];
+    practiceModeStatus.textContent = "Repeat one saved section; tempo and dynamics refresh each interval";
     totalSessionStatus.textContent = totalSessionSeconds === null
       ? "Optional second timer"
       : "Total timer: " + Math.round(totalSessionSeconds / 60) + " minutes";
   } else {
-    practiceModeStatus.textContent = sectionPdfs.length
-      ? sectionPdfs.length + " PDFs in the Sections folder"
-      : "No Sections folder found; all PDFs will rotate";
+    practiceModeStatus.textContent = selectedFolderPdfs.length
+      ? selectedFolderPdfs.length + " full score PDF" + (selectedFolderPdfs.length === 1 ? "" : "s") + " ready"
+      : "Choose a folder containing a full score PDF";
   }
 }
 
@@ -196,7 +227,7 @@ function calculateSessionDurations(pdfCount) {
 }
 
 async function prepareSessionDurationPlan() {
-  if (totalSessionSeconds === null || practiceMode === "single") {
+  if (totalSessionSeconds === null || practiceMode === "single-section") {
     sessionDurationPlan = [];
     return true;
   }
@@ -252,7 +283,7 @@ function getSectionRemainingMs() {
 }
 
 function hasTotalSessionLimit() {
-  return practiceMode === "single" && totalSessionSeconds !== null;
+  return practiceMode === "single-section" && totalSessionSeconds !== null;
 }
 
 function resetTotalSessionClock() {
@@ -500,7 +531,7 @@ async function startNewRound() {
   }
   playlist = shuffle(activePdfs);
   playlistIndex = 0;
-  if (totalSessionSeconds !== null && practiceMode === "sections") {
+  if (totalSessionSeconds !== null && practiceMode !== "single-section") {
     if (sessionDurationPlan.length !== playlist.length) sessionDurationPlan = calculateSessionDurations(playlist.length);
     playlist = playlist.map((item, index) => ({ ...item, durationSeconds: sessionDurationPlan[index] }));
   }
@@ -514,7 +545,7 @@ function startCountdown() {
   const endsAt = Date.now() + remainingMs;
   const updateCountdown = () => {
     const secondsLeft = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
-    rotationStatus.textContent = practiceMode === "single"
+    rotationStatus.textContent = practiceMode === "single-section"
       ? "Tempo and dynamics refresh in " + secondsLeft + "s"
       : "Next PDF in " + secondsLeft + "s · " + (playlist.length - playlistIndex) + " remaining this round";
     pdfCountdown.textContent = "Section: " + secondsLeft + "s left";
@@ -548,13 +579,152 @@ async function renderPage(page) {
   canvas.hidden = false;
 }
 
+function getRelativePdfPath(item) {
+  return item.path ?? item.file.webkitRelativePath.split("/").slice(1).join("/");
+}
+
+function refreshSectionSourceList() {
+  sectionSourceInput.replaceChildren();
+  selectedFolderPdfs.forEach((item, index) => {
+    const option = document.createElement("option");
+    option.value = String(index);
+    option.textContent = getRelativePdfPath(item);
+    sectionSourceInput.append(option);
+  });
+  openSectionEditorButton.disabled = !selectedFolderPdfs.length;
+}
+
+function renderDraftFragments() {
+  sectionFragmentList.replaceChildren();
+  draftFragments.forEach((fragment, index) => {
+    const entry = document.createElement("li");
+    entry.textContent = "Page " + fragment.page + " · fragment " + (index + 1);
+    const moveEarlier = document.createElement("button");
+    moveEarlier.type = "button";
+    moveEarlier.textContent = "↑";
+    moveEarlier.disabled = index === 0;
+    moveEarlier.title = "Move earlier";
+    moveEarlier.addEventListener("click", () => {
+      [draftFragments[index - 1], draftFragments[index]] = [draftFragments[index], draftFragments[index - 1]];
+      renderDraftFragments();
+      drawEditorMarkers();
+    });
+    const moveLater = document.createElement("button");
+    moveLater.type = "button";
+    moveLater.textContent = "↓";
+    moveLater.disabled = index === draftFragments.length - 1;
+    moveLater.title = "Move later";
+    moveLater.addEventListener("click", () => {
+      [draftFragments[index], draftFragments[index + 1]] = [draftFragments[index + 1], draftFragments[index]];
+      renderDraftFragments();
+      drawEditorMarkers();
+    });
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => {
+      draftFragments.splice(index, 1);
+      renderDraftFragments();
+      renderEditorPage();
+    });
+    entry.append(moveEarlier, moveLater, remove);
+    sectionFragmentList.append(entry);
+  });
+}
+
+function drawEditorMarkers() {
+  sectionEditorOverlay.replaceChildren();
+  const pageFragments = draftFragments.filter((fragment) => fragment.page === editorPage);
+  pageFragments.forEach((fragment, index) => {
+    const marker = document.createElement("span");
+    marker.className = "section-fragment-marker";
+    marker.style.left = (fragment.x * 100) + "%";
+    marker.style.top = (fragment.y * 100) + "%";
+    marker.style.width = (fragment.width * 100) + "%";
+    marker.style.height = (fragment.height * 100) + "%";
+    marker.textContent = String(draftFragments.indexOf(fragment) + 1);
+    sectionEditorOverlay.append(marker);
+  });
+}
+
+async function renderEditorPage() {
+  if (!editorPdf) return;
+  sectionEditorLoading.hidden = false;
+  const page = await editorPdf.getPage(editorPage);
+  const baseViewport = page.getViewport({ scale: 1 });
+  const width = Math.min(960, Math.max(320, sectionEditor.clientWidth - 48));
+  const viewport = page.getViewport({ scale: width / baseViewport.width });
+  sectionEditorCanvas.width = Math.floor(viewport.width);
+  sectionEditorCanvas.height = Math.floor(viewport.height);
+  await page.render({ canvasContext: sectionEditorContext, viewport }).promise;
+  sectionEditorPageNumber.textContent = "Page " + editorPage + " of " + editorPdf.numPages;
+  sectionEditorPreviousPage.disabled = editorPage === 1;
+  sectionEditorNextPage.disabled = editorPage === editorPdf.numPages;
+  sectionEditorLoading.hidden = true;
+  drawEditorMarkers();
+}
+
+async function loadEditorSource() {
+  editorSourceItem = selectedFolderPdfs[Number(sectionSourceInput.value)] ?? null;
+  if (!editorSourceItem) return;
+  sectionEditorStatus.textContent = "Loading " + editorSourceItem.name + "…";
+  editorPdf = await pdfjsLib.getDocument({ data: await editorSourceItem.file.arrayBuffer() }).promise;
+  editorPage = 1;
+  editorIsDrawing = true;
+  addFragmentButton.classList.add("active");
+  addFragmentButton.textContent = "Drawing: drag on the page";
+  await renderEditorPage();
+  sectionEditorStatus.textContent = "Drag directly on the page to add a fragment in reading order.";
+}
+
+function normalizeEditorSelection(event) {
+  const bounds = sectionEditorOverlay.getBoundingClientRect();
+  const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
+  const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height));
+  return { x, y };
+}
+
+async function renderSavedSection(section) {
+  loading.hidden = false;
+  canvas.hidden = true;
+  const scale = 1.5;
+  const padding = 18;
+  const crops = [];
+  for (const fragment of section.fragments) {
+    const page = await documentPdf.getPage(fragment.page);
+    const viewport = page.getViewport({ scale });
+    const sourceCanvas = document.createElement("canvas");
+    sourceCanvas.width = Math.floor(viewport.width);
+    sourceCanvas.height = Math.floor(viewport.height);
+    await page.render({ canvasContext: sourceCanvas.getContext("2d"), viewport }).promise;
+    const crop = document.createElement("canvas");
+    crop.width = Math.max(1, Math.round(sourceCanvas.width * fragment.width));
+    crop.height = Math.max(1, Math.round(sourceCanvas.height * fragment.height));
+    crop.getContext("2d").drawImage(sourceCanvas, Math.round(sourceCanvas.width * fragment.x), Math.round(sourceCanvas.height * fragment.y), crop.width, crop.height, 0, 0, crop.width, crop.height);
+    crops.push(crop);
+  }
+  const outputWidth = Math.max(...crops.map((crop) => crop.width)) + (padding * 2);
+  const outputHeight = crops.reduce((height, crop) => height + crop.height, padding * 2) + (Math.max(0, crops.length - 1) * padding);
+  canvas.width = outputWidth;
+  canvas.height = outputHeight;
+  context.fillStyle = "white";
+  context.fillRect(0, 0, outputWidth, outputHeight);
+  let y = padding;
+  crops.forEach((crop) => {
+    context.drawImage(crop, Math.round((outputWidth - crop.width) / 2), y);
+    y += crop.height + padding;
+  });
+  loading.hidden = true;
+  canvas.hidden = false;
+}
+
 async function showNextPdf() {
   if (isStopped) return;
   button.disabled = true;
   button.firstChild.textContent = "Loading… ";
   try {
     if (playlistIndex >= playlist.length && playlist.length) {
-      if (practiceMode === "single") {
+      if (practiceMode === "single-section") {
         refreshSinglePdfPractice();
         return;
       }
@@ -581,41 +751,49 @@ async function showNextPdf() {
     loading.hidden = false;
     canvas.hidden = true;
     // PDF.js renders into a canvas, avoiding the browser's unreliable native PDF plugin.
-    const source = result.file
-      ? { data: await result.file.arrayBuffer() }
-      : encodeURI(result.pdf);
+    const sourceFile = result.sourceFile ?? result.file;
+    const source = sourceFile ? { data: await sourceFile.arrayBuffer() } : encodeURI(result.pdf);
     documentPdf = await pdfjsLib.getDocument(source).promise;
-    await renderPage(1);
+    if (result.type === "saved-section") {
+      await renderSavedSection(result);
+    } else {
+      await renderPage(1);
+    }
     resetSectionClock();
     applyTempoForNewPdf();
     startDynamicsPractice();
-    pageControls.hidden = false;
+    pageControls.hidden = result.type === "saved-section";
     fileName.textContent = result.name;
-    collectionCount.textContent = practiceMode === "single"
-      ? "One Section · tempo and dynamics refresh every interval"
-      : playlist.length + " PDF" + (playlist.length === 1 ? "" : "s") + " in your collection · Round position " + (playlistIndex + 1) + " of " + playlist.length;
+    collectionCount.textContent = practiceMode === "single-section"
+      ? "One section · tempo and dynamics refresh every interval"
+      : practiceMode === "saved-sections"
+        ? playlist.length + " saved section" + (playlist.length === 1 ? "" : "s") + " · Round position " + (playlistIndex + 1) + " of " + playlist.length
+        : playlist.length + " PDF" + (playlist.length === 1 ? "" : "s") + " in your collection · Round position " + (playlistIndex + 1) + " of " + playlist.length;
     playlistIndex += 1;
     startCountdown();
   } catch (error) {
+    console.error("Practice Randomizer load error", error);
     fileName.textContent = "Couldn’t load your collection";
+    const detail = error instanceof Error && error.message ? error.message : "Unknown PDF rendering error";
     collectionCount.textContent = "Try choosing the folder again, then start a new session.";
+    rotationStatus.textContent = "Load error: " + detail;
   } finally {
     button.disabled = isStopped;
-    button.firstChild.textContent = practiceMode === "single" ? "Refresh now " : "Next now ";
+    button.firstChild.textContent = practiceMode === "single-section" ? "Refresh now " : "Next now ";
   }
 }
 
 startSessionButton.addEventListener("click", async () => {
   if (sessionStarted) return;
   if (!getActivePdfs().length) {
-    folderStatus.textContent = practiceMode === "single"
-      ? "Choose a PDF to practice before starting"
+    folderStatus.textContent = practiceMode === "single-section"
+      ? "Choose a saved section before starting"
       : "Choose a folder containing PDFs before starting";
     folderButton.focus();
     return;
   }
   if (!(await prepareSessionDurationPlan())) return;
-  if ((practiceMode === "single" || totalSessionSeconds === null) && methodMayBuildUp() && displayDurationSeconds < 60) {
+  if ((practiceMode === "single-section" || totalSessionSeconds === null) && methodMayBuildUp() && displayDurationSeconds < 60) {
     showBuildUpDurationError();
     return;
   }
@@ -689,7 +867,7 @@ durationForm.addEventListener("submit", (event) => {
     return;
   }
   displayDurationSeconds = requestedDuration;
-  if (practiceMode === "sections") {
+  if (practiceMode !== "single-section") {
     totalSessionSeconds = null;
     sessionDurationPlan = [];
     totalSessionStatus.textContent = "Using manual duration";
@@ -713,7 +891,7 @@ totalSessionForm.addEventListener("submit", async (event) => {
     return;
   }
   totalSessionSeconds = Math.round(requestedMinutes * 60);
-  if (practiceMode === "single") {
+  if (practiceMode === "single-section") {
     sessionDurationPlan = [];
     totalSessionStatus.textContent = "Total timer: " + Math.round(totalSessionSeconds / 60) + " minutes";
     return;
@@ -725,18 +903,18 @@ practiceModeInput.addEventListener("change", async () => {
   if (sessionStarted) return;
   practiceMode = practiceModeInput.value;
   updatePracticeModeUi();
-  if (practiceMode === "sections" && totalSessionSeconds !== null) await prepareSessionDurationPlan();
+  if (practiceMode !== "single-section" && totalSessionSeconds !== null) await prepareSessionDurationPlan();
 });
 singlePdfInput.addEventListener("change", () => {
-  selectedSinglePdf = selectedFolderPdfs[Number(singlePdfInput.value)] ?? null;
-  singlePdfStatus.textContent = selectedSinglePdf ? "Selected: " + selectedSinglePdf.name : "Choose a PDF";
+  selectedSinglePdf = savedSections[Number(singlePdfInput.value)] ?? null;
+  singlePdfStatus.textContent = selectedSinglePdf ? "Selected: " + selectedSinglePdf.name : "Choose a saved section";
 });
 folderButton.addEventListener("click", () => folderInput.click());
 folderInput.addEventListener("change", async () => {
   const selectedFiles = [...folderInput.files];
   selectedFolderPdfs = selectedFiles
     .filter((file) => file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"))
-    .map((file) => ({ file, name: file.name }));
+    .map((file) => ({ file, name: file.name, path: file.webkitRelativePath.split("/").slice(1).join("/") }));
 
   const settingsFile = selectedFiles.find((file) => {
     const pathParts = file.webkitRelativePath.split("/");
@@ -751,10 +929,27 @@ folderInput.addEventListener("change", async () => {
     }
   }
   applyPracticeSettings(settings, "practice-settings.json");
-  sectionPdfs = selectedFolderPdfs.filter(isSectionPdf);
+  const sectionsFile = selectedFiles.find((file) => {
+    const pathParts = file.webkitRelativePath.split("/");
+    return file.name === "practice-sections.json" && pathParts.length === 2;
+  });
+  savedSections = [];
+  if (sectionsFile) {
+    try {
+      const savedData = JSON.parse(await sectionsFile.text());
+      savedSections = (Array.isArray(savedData.sections) ? savedData.sections : []).map((section) => {
+        const sourceFile = selectedFolderPdfs.find((item) => item.path === section.source);
+        const fragments = Array.isArray(section.fragments) ? section.fragments.filter((fragment) => Number.isInteger(fragment.page) && fragment.page >= 1 && ["x", "y", "width", "height"].every((key) => Number.isFinite(fragment[key])) && fragment.x >= 0 && fragment.y >= 0 && fragment.width > 0 && fragment.height > 0 && fragment.x + fragment.width <= 1 && fragment.y + fragment.height <= 1) : [];
+        return sourceFile && typeof section.name === "string" && fragments.length ? { type: "saved-section", name: section.name, sourcePath: section.source, sourceFile: sourceFile.file, fragments } : null;
+      }).filter(Boolean);
+    } catch {
+      savedSections = [];
+    }
+  }
   populateSinglePdfPicker();
+  refreshSectionSourceList();
   updatePracticeModeUi();
-  if (totalSessionSeconds !== null && practiceMode === "sections") await prepareSessionDurationPlan();
+  if (totalSessionSeconds !== null && practiceMode !== "single-section") await prepareSessionDurationPlan();
 
   if (!selectedFolderPdfs.length) {
     folderStatus.textContent = "No PDFs found — choose another folder";
@@ -766,9 +961,8 @@ folderInput.addEventListener("change", async () => {
   }
 
   const folderName = selectedFolderPdfs[0].file.webkitRelativePath.split("/")[0];
-  folderStatus.textContent = sectionPdfs.length
-    ? sectionPdfs.length + " section PDFs from " + folderName
-    : selectedFolderPdfs.length + " PDFs from " + folderName;
+  folderStatus.textContent = selectedFolderPdfs.length + " full score PDF" + (selectedFolderPdfs.length === 1 ? "" : "s") + " from " + folderName;
+  if (savedSections.length) sectionEditorStatus.textContent = savedSections.length + " saved section" + (savedSections.length === 1 ? "" : "s") + " imported from practice-sections.json";
   playlist = [];
   playlistIndex = 0;
   clearTimeout(rotationTimer);
@@ -826,8 +1020,91 @@ tempoMethodForm.addEventListener("submit", (event) => {
   activeTempoMethod = tempoMethod;
   tempoMethodStatus.textContent = `Next session: ${tempoMethodLabels[tempoMethod]}`;
 });
+openSectionEditorButton.addEventListener("click", async () => {
+  sectionEditor.hidden = false;
+  refreshSectionSourceList();
+  if (!editorSourceItem) await loadEditorSource();
+});
+closeSectionEditorButton.addEventListener("click", () => { sectionEditor.hidden = true; });
+sectionSourceInput.addEventListener("change", async () => {
+  draftFragments = [];
+  renderDraftFragments();
+  await loadEditorSource();
+});
+addFragmentButton.addEventListener("click", () => {
+  if (!editorPdf) return;
+  editorIsDrawing = !editorIsDrawing;
+  addFragmentButton.classList.toggle("active", editorIsDrawing);
+  addFragmentButton.textContent = editorIsDrawing ? "Drawing: drag on the page" : "Add fragment";
+  sectionEditorStatus.textContent = editorIsDrawing ? "Drag a rectangle around the next fragment." : "Add fragments in reading order, then save the section.";
+});
+sectionEditorOverlay.addEventListener("pointerdown", (event) => {
+  if (!editorIsDrawing) return;
+  event.preventDefault();
+  editorDragStart = normalizeEditorSelection(event);
+  sectionEditorOverlay.setPointerCapture(event.pointerId);
+  editorSelection = document.createElement("span");
+  editorSelection.className = "section-editor-selection";
+  sectionEditorOverlay.append(editorSelection);
+});
+sectionEditorOverlay.addEventListener("pointermove", (event) => {
+  if (!editorDragStart || !editorSelection) return;
+  const point = normalizeEditorSelection(event);
+  const x = Math.min(editorDragStart.x, point.x);
+  const y = Math.min(editorDragStart.y, point.y);
+  editorSelection.style.left = (x * 100) + "%";
+  editorSelection.style.top = (y * 100) + "%";
+  editorSelection.style.width = (Math.abs(point.x - editorDragStart.x) * 100) + "%";
+  editorSelection.style.height = (Math.abs(point.y - editorDragStart.y) * 100) + "%";
+});
+sectionEditorOverlay.addEventListener("pointerup", (event) => {
+  if (!editorDragStart) return;
+  const point = normalizeEditorSelection(event);
+  const x = Math.min(editorDragStart.x, point.x);
+  const y = Math.min(editorDragStart.y, point.y);
+  const width = Math.abs(point.x - editorDragStart.x);
+  const height = Math.abs(point.y - editorDragStart.y);
+  editorSelection?.remove();
+  editorSelection = null;
+  editorDragStart = null;
+  if (width < 0.01 || height < 0.01) return;
+  draftFragments.push({ page: editorPage, x, y, width, height });
+  renderDraftFragments();
+  drawEditorMarkers();
+  sectionEditorStatus.textContent = draftFragments.length + " fragment" + (draftFragments.length === 1 ? "" : "s") + " added. Continue or save the section.";
+});
+saveSectionButton.addEventListener("click", () => {
+  const name = sectionNameInput.value.trim();
+  if (!name || !editorSourceItem || !draftFragments.length) {
+    sectionEditorStatus.textContent = "Enter a name and add at least one fragment before saving.";
+    return;
+  }
+  savedSections.push({ type: "saved-section", name, sourcePath: getRelativePdfPath(editorSourceItem), sourceFile: editorSourceItem.file, fragments: draftFragments.map((fragment) => ({ ...fragment })) });
+  sectionNameInput.value = "";
+  draftFragments = [];
+  renderDraftFragments();
+  drawEditorMarkers();
+  updatePracticeModeUi();
+  sectionEditorStatus.textContent = name + " saved. Download the JSON when you are ready.";
+});
+exportSectionsButton.addEventListener("click", () => {
+  if (!savedSections.length) {
+    sectionEditorStatus.textContent = "Save at least one saved section first.";
+    return;
+  }
+  const data = { version: 1, sections: savedSections.map((section) => ({ name: section.name, source: section.sourcePath, fragments: section.fragments })) };
+  const download = document.createElement("a");
+  download.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2) + "\n"], { type: "application/json" }));
+  download.download = "practice-sections.json";
+  download.click();
+  setTimeout(() => URL.revokeObjectURL(download.href), 0);
+  sectionEditorStatus.textContent = "Downloaded practice-sections.json — place it in the folder you chose.";
+});
+sectionEditorPreviousPage.addEventListener("click", () => { if (editorPage > 1) { editorPage -= 1; renderEditorPage(); } });
+sectionEditorNextPage.addEventListener("click", () => { if (editorPdf && editorPage < editorPdf.numPages) { editorPage += 1; renderEditorPage(); } });
 previousPage.addEventListener("click", () => currentPage > 1 && renderPage(currentPage - 1));
 nextPage.addEventListener("click", () => currentPage < documentPdf.numPages && renderPage(currentPage + 1));
-rotationStatus.textContent = "Choose a PDF folder to begin";
+updatePracticeModeUi();
+rotationStatus.textContent = "Choose the folder containing the score to begin";
 viewer.hidden = true;
 loading.hidden = true;
