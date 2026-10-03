@@ -634,6 +634,28 @@ function renderDraftFragments() {
 
 function drawEditorMarkers() {
   sectionEditorOverlay.replaceChildren();
+  const sourcePath = editorSourceItem && getRelativePdfPath(editorSourceItem);
+  const savedFragments = savedSections.flatMap((section) => {
+    if (section.sourcePath !== sourcePath) return [];
+    return section.fragments
+      .filter((fragment) => fragment.page === editorPage)
+      .map((fragment, index) => ({ fragment, sectionName: section.name, fragmentNumber: index + 1 }));
+  });
+  savedFragments.forEach(({ fragment, sectionName, fragmentNumber }) => {
+    const marker = document.createElement("span");
+    marker.className = "saved-section-marker";
+    marker.style.left = (fragment.x * 100) + "%";
+    marker.style.top = (fragment.y * 100) + "%";
+    marker.style.width = (fragment.width * 100) + "%";
+    marker.style.height = (fragment.height * 100) + "%";
+    const label = document.createElement("span");
+    label.className = "saved-section-label";
+    label.textContent = sectionName;
+    marker.append(label);
+    marker.title = sectionName + " · saved fragment " + fragmentNumber;
+    marker.setAttribute("aria-label", marker.title);
+    sectionEditorOverlay.append(marker);
+  });
   const pageFragments = draftFragments.filter((fragment) => fragment.page === editorPage);
   pageFragments.forEach((fragment, index) => {
     const marker = document.createElement("span");

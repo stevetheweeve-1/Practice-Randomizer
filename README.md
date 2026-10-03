@@ -54,7 +54,7 @@ use a numerator from 1 to 32 and a denominator of 1, 2, 4, 8, or 16. `targetTemp
 
 ## Section Editor
 
-Use **Open Section Editor** after choosing a folder to turn a full-score PDF into practice sections. Select the source PDF, enter a section name, click **Add fragment**, and drag around each line in reading order. Use the page buttons when a section spans pages. The practice display stacks the saved fragments vertically. The list below the page controls their reading order; use ↑, ↓, or **Remove** to adjust a draft before saving.
+Use **Open Section Editor** after choosing a folder to turn a full-score PDF into practice sections. Select the source PDF, enter a section name, click **Add fragment**, and drag around each line in reading order. Previously saved fragments for the active score and page appear as green dashed overlays, while the section you are creating remains orange. Use the page buttons when a section spans pages. The practice display stacks the saved fragments vertically. The list below the page controls their reading order; use ↑, ↓, or **Remove** to adjust a draft before saving.
 
 Click **Save section** to keep the section in the current browser session, then **Download practice-sections.json**. Put that downloaded file at the top level of the same folder as the source PDF. When you select the folder again, the app imports it automatically; choose **Saved sections (random)** as the practice mode to rotate those sections.
 

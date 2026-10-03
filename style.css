@@ -99,7 +99,10 @@ body[data-view="practice"] .setup-heading { display: none; }
 .section-editor-canvas-wrap { position: relative; width: fit-content; max-width: 100%; margin: 18px auto 0; box-shadow: 0 5px 20px #25302655; }
 #section-editor-canvas { max-width: 100%; height: auto; display: block; }
 .section-editor-overlay { position: absolute; inset: 0; z-index: 2; touch-action: none; cursor: crosshair; pointer-events: auto; }
-.section-fragment-marker, .section-editor-selection { position: absolute; display: grid; place-items: center; border: 2px solid #d85d31; background: #e97f4833; color: #8d4b3d; font: 700 .72rem "DM Mono", monospace; pointer-events: none; }
+.section-fragment-marker, .section-editor-selection, .saved-section-marker { position: absolute; display: grid; place-items: center; font: 700 .72rem "DM Mono", monospace; pointer-events: none; }
+.section-fragment-marker, .section-editor-selection { border: 2px solid #d85d31; background: #e97f4833; color: #8d4b3d; }
+.saved-section-marker { border: 1px dashed #08744357; background: #80a99c44; color: #80a99c44; overflow: hidden; padding: 2px; text-align: center; font-size: 3.3rem; }
+.saved-section-label { line-height: .9; transform: rotate(-8deg); }
 .section-editor-selection { border-style: dashed; }
 .section-fragment-list { margin: 16px 0 0; padding-left: 22px; color: #536055; font-size: .7rem; }
 .section-fragment-list li { display: flex; align-items: center; gap: 8px; margin: 7px 0; }
