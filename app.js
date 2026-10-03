@@ -152,6 +152,10 @@ function populateSinglePdfPicker() {
 function updatePracticeModeUi() {
   const isSingle = practiceMode === "single-section";
   singlePdfPicker.hidden = !isSingle;
+  // The setup layout uses flex, so set an inline display value as well as the
+  // semantic hidden attribute. This guarantees the picker is absent outside
+  // One section mode even if a browser stylesheet overrides [hidden].
+  singlePdfPicker.style.display = isSingle ? "flex" : "none";
   const isSavedSections = practiceMode === "saved-sections";
   totalSessionForm.hidden = false;
   durationLabel.textContent = isSingle ? "Refresh tempo and dynamics every" : "Display each PDF for";
@@ -170,8 +174,8 @@ function updatePracticeModeUi() {
       : "Total timer: " + Math.round(totalSessionSeconds / 60) + " minutes";
   } else {
     practiceModeStatus.textContent = selectedFolderPdfs.length
-      ? selectedFolderPdfs.length + " whole-piece PDF" + (selectedFolderPdfs.length === 1 ? "" : "s") + " ready"
-      : "Choose a folder containing a whole-piece PDF";
+      ? selectedFolderPdfs.length + " full score PDF" + (selectedFolderPdfs.length === 1 ? "" : "s") + " ready"
+      : "Choose a folder containing a full score PDF";
   }
 }
 
@@ -957,7 +961,7 @@ folderInput.addEventListener("change", async () => {
   }
 
   const folderName = selectedFolderPdfs[0].file.webkitRelativePath.split("/")[0];
-  folderStatus.textContent = selectedFolderPdfs.length + " whole-piece PDF" + (selectedFolderPdfs.length === 1 ? "" : "s") + " from " + folderName;
+  folderStatus.textContent = selectedFolderPdfs.length + " full score PDF" + (selectedFolderPdfs.length === 1 ? "" : "s") + " from " + folderName;
   if (savedSections.length) sectionEditorStatus.textContent = savedSections.length + " saved section" + (savedSections.length === 1 ? "" : "s") + " imported from practice-sections.json";
   playlist = [];
   playlistIndex = 0;
@@ -1100,6 +1104,7 @@ sectionEditorPreviousPage.addEventListener("click", () => { if (editorPage > 1) 
 sectionEditorNextPage.addEventListener("click", () => { if (editorPdf && editorPage < editorPdf.numPages) { editorPage += 1; renderEditorPage(); } });
 previousPage.addEventListener("click", () => currentPage > 1 && renderPage(currentPage - 1));
 nextPage.addEventListener("click", () => currentPage < documentPdf.numPages && renderPage(currentPage + 1));
-rotationStatus.textContent = "Choose a PDF folder to begin";
+updatePracticeModeUi();
+rotationStatus.textContent = "Choose the folder containing the score to begin";
 viewer.hidden = true;
 loading.hidden = true;

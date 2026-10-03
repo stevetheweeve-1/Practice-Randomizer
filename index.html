@@ -60,18 +60,18 @@
       <div class="setup-heading">
         <p class="label">Weeve's Practice Randomizer</p>
         <h1>Set up your session</h1>
-        <p>Choose your material and settings, then begin when you are ready.</p>
+        <p>Choose your score and practice settings.</p>
       </div>
       <section class="options-panel">
         <div class="folder-picker">
           <input id="folder-input" type="file" accept="application/pdf,.pdf,application/json,.json" webkitdirectory multiple hidden />
-          <button id="folder-button" type="button">Choose PDF folder</button>
-          <span id="folder-status">Choose a folder containing PDFs</span>
+          <button id="folder-button" type="button">Choose folder</button>
+          <span id="folder-status">Choose the folder containing the score</span>
         </div>
         <div class="practice-mode-control">
           <label for="practice-mode-input">Practice mode</label>
           <select id="practice-mode-input">
-            <option value="whole-piece">Whole piece</option>
+            <option value="whole-piece">Full score</option>
             <option value="saved-sections">Saved sections (random)</option>
             <option value="single-section">One section</option>
           </select>
@@ -86,7 +86,7 @@
           <div class="section-editor-heading">
             <div>
               <p class="label">SECTION EDITOR</p>
-              <h2>Build sections from a whole-piece PDF</h2>
+              <h2>Build sections from a full score PDF</h2>
             </div>
             <button id="close-section-editor" type="button">Close editor</button>
           </div>
