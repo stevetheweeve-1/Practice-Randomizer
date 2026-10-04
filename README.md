@@ -20,7 +20,7 @@ Use **Choose score folder** to select any folder on your computer. Its score PDF
 
 Keep the full-score PDF, `practice-settings.json`, and (when you create sections) `practice-sections.json` in one parent folder. **Full score** displays the PDFs in that folder. **Saved sections (random)** rotates the sections defined in `practice-sections.json`. **One section** lets you select one saved section and keeps it displayed while tempo and dynamics refresh each interval.
 
-Use **Total session time** to set the length of the whole round in minutes. The app divides that time across every PDF, distributing any extra seconds so the total is exact. In **One section** mode, it instead sets the total practice duration and shows a second countdown timer. Press **Apply** beside the per-PDF duration to return to manual timing. With the Build up tempo method, every calculated PDF duration must be at least 60 seconds.
+Use **Total session time** to set the length of the whole round in minutes. The app divides that time across every PDF, distributing any extra seconds so the total is exact, and displays a session countdown timer. In **One section** mode, it instead sets the total practice duration while tempo and dynamics refresh at the selected interval. Press **Apply** beside the per-PDF duration to return to manual timing. With the Build up tempo method, every calculated PDF duration must be at least 60 seconds.
 
 Press **Sound on** once to start the metronome. Press **Sound off** to silence the clicks while keeping the visual beat indicator running. Browsers require this one interaction before allowing audio playback.
 
@@ -54,7 +54,7 @@ use a numerator from 1 to 32 and a denominator of 1, 2, 4, 8, or 16. `targetTemp
 
 ## Section Editor
 
-Use **Open Section Editor** after choosing a folder to turn a full-score PDF into practice sections. Select the source PDF, enter a section name, click **Add fragment**, and drag around each line in reading order. Use the page buttons when a section spans pages. The practice display stacks the saved fragments vertically. The list below the page controls their reading order; use ↑, ↓, or **Remove** to adjust a draft before saving.
+Use **Open Section Editor** after choosing a folder to turn a full-score PDF into practice sections. Select the source PDF, enter a section name, click **Add fragment**, and drag around each line in reading order. Previously saved fragments for the active score and page appear as color-coded dashed overlays, with a legend below the page controls, while the section you are creating remains orange. Use the page buttons when a section spans pages. The practice display stacks the saved fragments vertically. The list below the page controls their reading order; use ↑, ↓, or **Remove** to adjust a draft before saving.
 
 Click **Save section** to keep the section in the current browser session, then **Download practice-sections.json**. Put that downloaded file at the top level of the same folder as the source PDF. When you select the folder again, the app imports it automatically; choose **Saved sections (random)** as the practice mode to rotate those sections.
 
