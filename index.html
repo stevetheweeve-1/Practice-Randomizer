@@ -29,29 +29,29 @@
           <div class="viewer-actions">
             <div class="metronome" aria-live="polite">
               <span id="beat-light" class="beat-light" aria-hidden="true"></span>
-              <span id="bpm-label">Metronome Â· 60 BPM</span>
+              <span id="bpm-label">Metronome &middot; 60 BPM</span>
             </div>
             <span id="dynamics-label" class="dynamics-label" hidden></span>
-            <button id="another-pdf" type="button" disabled>Next now <span aria-hidden="true">â</span></button>
+            <button id="another-pdf" type="button" disabled>Next now <span aria-hidden="true">&rarr;</span></button>
           </div>
         </div>
         <div id="waiting-state" class="empty-state">
-          <span aria-hidden="true">â</span>
+          <span aria-hidden="true">&#x2301;</span>
           <h2>Ready to begin</h2>
           <p>Click <strong>Start session</strong> to display the first PDF.</p>
         </div>
         <div id="empty-state" class="empty-state" hidden>
-          <span aria-hidden="true">â</span>
+          <span aria-hidden="true">&#x2301;</span>
           <h2>No PDFs yet</h2>
           <p>Put one or more PDF files in the <code>pdfs</code> folder, then try again.</p>
         </div>
         <div id="pdf-viewer" class="pdf-viewer" aria-label="Random PDF viewer">
-          <div id="loading" class="loading">Rendering PDFâ¦</div>
+          <div id="loading" class="loading">Rendering PDF&hellip;</div>
           <canvas id="pdf-canvas" hidden></canvas>
           <div id="page-controls" class="page-controls" hidden>
-            <button id="previous-page" class="page-button" type="button" aria-label="Previous page">â</button>
+            <button id="previous-page" class="page-button" type="button" aria-label="Previous page">&larr;</button>
             <span id="page-number"></span>
-            <button id="next-page" class="page-button" type="button" aria-label="Next page">â</button>
+            <button id="next-page" class="page-button" type="button" aria-label="Next page">&rarr;</button>
           </div>
         </div>
       </section>
@@ -72,7 +72,7 @@
           <label for="practice-mode-input">Practice mode</label>
           <select id="practice-mode-input">
             <option value="whole-piece">Full score</option>
-            <option value="saved-sections">Saved sections (random)</option>
+            <option value="saved-sections" selected>Saved sections (random)</option>
             <option value="single-section">One section</option>
           </select>
           <span id="practice-mode-status">Choose a folder first</span>
@@ -91,6 +91,10 @@
             <button id="close-section-editor" type="button">Close editor</button>
           </div>
           <p class="section-editor-help">Choose a source PDF, name a section, then drag a rectangle around each line or fragment in reading order.</p>
+          <div class="section-editor-actions">
+            <button id="save-section-button" type="button">Save section</button>
+            <button id="export-sections-button" type="button">Download practice-sections.json</button>
+          </div>
           <div class="section-editor-controls">
             <label for="section-source-input">Source PDF</label>
             <select id="section-source-input"></select>
@@ -108,26 +112,23 @@
             <span id="section-editor-page-number">Choose a PDF</span>
             <button id="section-editor-next-page" type="button">Next page →</button>
           </div>
+          <div id="section-overlay-legend" class="section-overlay-legend" aria-label="Saved section colors" hidden></div>
           <ol id="section-fragment-list" class="section-fragment-list"></ol>
-          <div class="section-editor-actions">
-            <button id="save-section-button" type="button">Save section</button>
-            <button id="export-sections-button" type="button">Download practice-sections.json</button>
-          </div>
           <p id="section-editor-status" class="section-editor-status">Choose a folder, then open the editor.</p>
         </section>
         <button id="open-section-editor" class="open-section-editor" type="button" disabled>Open Section Editor</button>
-        <form id="duration-form" class="duration-form">
-          <label id="duration-label" for="duration-input">Display each PDF for</label>
-          <input id="duration-input" type="number" min="1" max="3600" value="60" inputmode="numeric" required />
-          <span>seconds</span>
-          <button type="submit">Apply</button>
-        </form>
         <form id="total-session-form" class="total-session-form">
           <label for="total-session-input">Total session time</label>
           <input id="total-session-input" type="number" min="1" max="1440" step="0.1" inputmode="decimal" required />
           <span>minutes</span>
           <button type="submit">Apply total</button>
           <span id="total-session-status">Optional</span>
+        </form>
+        <form id="duration-form" class="duration-form">
+          <label id="duration-label" for="duration-input">Display each PDF for</label>
+          <input id="duration-input" type="number" min="1" max="3600" value="60" inputmode="numeric" required />
+          <span>seconds</span>
+          <button type="submit">Apply</button>
         </form>
         <form id="time-signature-form" class="time-signature-form">
           <label for="time-signature-input">Time signature</label>

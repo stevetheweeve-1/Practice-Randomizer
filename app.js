@@ -67,6 +67,7 @@ const sectionEditorLoading = document.querySelector("#section-editor-loading");
 const sectionEditorPageNumber = document.querySelector("#section-editor-page-number");
 const sectionEditorPreviousPage = document.querySelector("#section-editor-previous-page");
 const sectionEditorNextPage = document.querySelector("#section-editor-next-page");
+const sectionOverlayLegend = document.querySelector("#section-overlay-legend");
 const sectionFragmentList = document.querySelector("#section-fragment-list");
 const saveSectionButton = document.querySelector("#save-section-button");
 const exportSectionsButton = document.querySelector("#export-sections-button");
@@ -86,7 +87,7 @@ let visualMetronomeTimer;
 let currentBpm = 60;
 let selectedFolderPdfs = [];
 let selectedSinglePdf = null;
-let practiceMode = "whole-piece";
+let practiceMode = "saved-sections";
 let isStopped = true;
 let sessionStarted = false;
 let metronomeEnabled = true;
@@ -121,6 +122,14 @@ const defaultPracticeSettings = Object.freeze({
 });
 
 const dynamicsChoices = ["Piano (p)", "Mezzo-piano (mp)", "Mezzo-forte (mf)", "Forte (f)", "Crescendo", "Decrescendo"];
+const savedSectionOverlayPalette = [
+  { fill: "#80a99c44", border: "#08744357", label: "#80a99c44" },
+  { fill: "#78a8c744", border: "#1f638857", label: "#78a8c744" },
+  { fill: "#aa91c544", border: "#67458c57", label: "#aa91c544" },
+  { fill: "#d4a15d44", border: "#925a1f57", label: "#d4a15d44" },
+  { fill: "#cf849144", border: "#8f3d4a57", label: "#cf849144" },
+  { fill: "#75af9c44", border: "#1f705b57", label: "#75af9c44" },
+];
 
 function showSetupView() {
   document.body.dataset.view = "setup";
@@ -283,7 +292,7 @@ function getSectionRemainingMs() {
 }
 
 function hasTotalSessionLimit() {
-  return practiceMode === "single-section" && totalSessionSeconds !== null;
+  return totalSessionSeconds !== null;
 }
 
 function resetTotalSessionClock() {
@@ -632,18 +641,45 @@ function renderDraftFragments() {
   });
 }
 
+function getSavedSectionsForSource(sourcePath) {
+  return savedSections
+    .map((section, index) => ({ section, color: savedSectionOverlayPalette[index % savedSectionOverlayPalette.length] }))
+    .filter(({ section }) => section.sourcePath === sourcePath);
+}
+
+function renderSavedSectionLegend(sourceSections) {
+  sectionOverlayLegend.replaceChildren();
+  sectionOverlayLegend.hidden = !sourceSections.length;
+  sectionOverlayLegend.style.display = sourceSections.length ? "flex" : "none";
+  sourceSections.forEach(({ section, color }) => {
+    const item = document.createElement("span");
+    item.className = "section-overlay-legend-item";
+    const swatch = document.createElement("span");
+    swatch.className = "section-overlay-legend-swatch";
+    swatch.style.setProperty("--overlay-fill", color.fill);
+    swatch.style.setProperty("--overlay-border", color.border);
+    swatch.setAttribute("aria-hidden", "true");
+    item.append(swatch, section.name);
+    sectionOverlayLegend.append(item);
+  });
+}
+
 function drawEditorMarkers() {
   sectionEditorOverlay.replaceChildren();
   const sourcePath = editorSourceItem && getRelativePdfPath(editorSourceItem);
-  const savedFragments = savedSections.flatMap((section) => {
-    if (section.sourcePath !== sourcePath) return [];
+  const sourceSections = getSavedSectionsForSource(sourcePath);
+  renderSavedSectionLegend(sourceSections);
+  const savedFragments = sourceSections.flatMap(({ section, color }) => {
     return section.fragments
       .filter((fragment) => fragment.page === editorPage)
-      .map((fragment, index) => ({ fragment, sectionName: section.name, fragmentNumber: index + 1 }));
+      .map((fragment, index) => ({ fragment, sectionName: section.name, fragmentNumber: index + 1, color }));
   });
-  savedFragments.forEach(({ fragment, sectionName, fragmentNumber }) => {
+  savedFragments.forEach(({ fragment, sectionName, fragmentNumber, color }) => {
     const marker = document.createElement("span");
     marker.className = "saved-section-marker";
+    marker.style.setProperty("--overlay-fill", color.fill);
+    marker.style.setProperty("--overlay-border", color.border);
+    marker.style.setProperty("--overlay-label", color.label);
     marker.style.left = (fragment.x * 100) + "%";
     marker.style.top = (fragment.y * 100) + "%";
     marker.style.width = (fragment.width * 100) + "%";
