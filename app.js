@@ -54,6 +54,8 @@ const targetTempoStatus = document.querySelector("#target-tempo-status");
 const tempoMethodForm = document.querySelector("#tempo-method-form");
 const tempoMethodInput = document.querySelector("#tempo-method-input");
 const tempoMethodStatus = document.querySelector("#tempo-method-status");
+const tempoAnchorControl = document.querySelector("#tempo-anchor-control");
+const tempoAnchorInput = document.querySelector("#tempo-anchor-input");
 const sectionEditor = document.querySelector("#section-editor");
 const openSectionEditorButton = document.querySelector("#open-section-editor");
 const closeSectionEditorButton = document.querySelector("#close-section-editor");
@@ -98,6 +100,8 @@ let maximumBpm = 120;
 let targetTempo = Number(targetTempoInput.value);
 let tempoMethod = "random";
 let activeTempoMethod = "random";
+let useAnchorTempos = false;
+let activeUseAnchorTempos = false;
 let rampTimer;
 let sectionElapsedMs = 0;
 let sectionActiveSince = null;
@@ -213,8 +217,9 @@ function parseTimeSignature(value) {
 
 const tempoMethodLabels = {
   random: "Random BPM",
-  "half-target": "Half target",
   "build-up": "Build up",
+  "half-target": "Half target",
+  target: "Target",
 };
 
 function isTempoMethod(value) {
@@ -223,6 +228,27 @@ function isTempoMethod(value) {
 
 function methodMayBuildUp() {
   return tempoMethod === "build-up";
+}
+
+function methodSupportsAnchorTempos(method = tempoMethod) {
+  return method === "random" || method === "build-up";
+}
+
+function hasValidAnchorTempos() {
+  return targetTempo >= minimumBpm && targetTempo <= maximumBpm;
+}
+
+function getTempoMethodDescription(method, useAnchors) {
+  const label = tempoMethodLabels[method];
+  return useAnchors && methodSupportsAnchorTempos(method) ? label + " · min / target / max" : label;
+}
+
+function updateTempoAnchorUi() {
+  const supportsAnchors = methodSupportsAnchorTempos();
+  tempoAnchorControl.hidden = !supportsAnchors;
+  tempoAnchorControl.style.display = supportsAnchors ? "flex" : "none";
+  if (!supportsAnchors) tempoAnchorInput.checked = false;
+  useAnchorTempos = supportsAnchors && tempoAnchorInput.checked;
 }
 
 function showBuildUpDurationError() {
@@ -265,7 +291,7 @@ function setCurrentTempo(tempo, method) {
 }
 
 function updateTempoMethodStatus(prefix = "Active") {
-  tempoMethodStatus.textContent = `${prefix}: ${tempoMethodLabels[activeTempoMethod]}`;
+  tempoMethodStatus.textContent = `${prefix}: ${getTempoMethodDescription(activeTempoMethod, activeUseAnchorTempos)}`;
 }
 
 function resetSectionClock() {
@@ -340,6 +366,21 @@ function startTotalSessionCountdown() {
 
 function startBuildUp() {
   clearTimeout(rampTimer);
+  if (activeUseAnchorTempos) {
+    const tempos = [minimumBpm, targetTempo, maximumBpm];
+    const stageDurationMs = (currentDisplayDurationSeconds * 1000) / tempos.length;
+    const scheduleAnchorTempo = () => {
+      if (!sessionStarted || isStopped || activeTempoMethod !== "build-up") return;
+      const elapsedMs = getSectionElapsedMs();
+      const stageIndex = Math.min(tempos.length - 1, Math.floor(elapsedMs / stageDurationMs));
+      setCurrentTempo(tempos[stageIndex], getTempoMethodDescription("build-up", true));
+      if (stageIndex >= tempos.length - 1) return;
+      const nextStageAtMs = (stageIndex + 1) * stageDurationMs;
+      rampTimer = setTimeout(scheduleAnchorTempo, Math.max(1, nextStageAtMs - elapsedMs));
+    };
+    scheduleAnchorTempo();
+    return;
+  }
   const transitions = Math.ceil(currentDisplayDurationSeconds / 30) - 1;
 
   const scheduleTempo = () => {
@@ -360,6 +401,7 @@ function startBuildUp() {
 function beginTempoMethod() {
   clearTimeout(rampTimer);
   activeTempoMethod = tempoMethod;
+  activeUseAnchorTempos = useAnchorTempos;
   updateTempoMethodStatus();
 }
 
@@ -370,6 +412,8 @@ function applyTempoForNewPdf() {
     setCurrentTempo(Math.max(1, Math.round(targetTempo / 2)), tempoMethodLabels["half-target"]);
   } else if (activeTempoMethod === "build-up") {
     startBuildUp();
+  } else if (activeTempoMethod === "target") {
+    setCurrentTempo(targetTempo, tempoMethodLabels.target);
   }
 }
 
@@ -455,6 +499,29 @@ function startVisualMetronome() {
   visualMetronomeTimer = setInterval(tick, 60000 / currentBpm);
 }
 
+async function showFullScoreAtSessionEnd() {
+  const fullScore = selectedFolderPdfs[0];
+  if (!fullScore) return false;
+
+  try {
+    waitingState.hidden = true;
+    emptyState.hidden = true;
+    viewer.hidden = false;
+    pageControls.hidden = false;
+    loading.hidden = false;
+    canvas.hidden = true;
+    documentPdf = await pdfjsLib.getDocument({ data: await fullScore.file.arrayBuffer() }).promise;
+    await renderPage(1);
+    fileName.textContent = fullScore.name;
+    return true;
+  } catch (error) {
+    console.error("Practice Randomizer full score load error", error);
+    viewer.hidden = true;
+    waitingState.hidden = false;
+    return false;
+  }
+}
+
 async function completeRound() {
   if (targetTempo === null) {
     await finishSession();
@@ -470,11 +537,11 @@ async function completeRound() {
   sessionStarted = false;
   playlist = [];
   playlistIndex = 0;
-  viewer.hidden = true;
-  waitingState.hidden = false;
-  emptyState.hidden = true;
-  fileName.textContent = "Round complete";
-  collectionCount.textContent = `Metronome continues at your target tempo of ${targetTempo} BPM.`;
+  const isFullScoreVisible = await showFullScoreAtSessionEnd();
+  if (!isFullScoreVisible) fileName.textContent = "Round complete";
+  collectionCount.textContent = isFullScoreVisible
+    ? `Full score displayed · Metronome continues at your target tempo of ${targetTempo} BPM.`
+    : `Metronome continues at your target tempo of ${targetTempo} BPM.`;
   rotationStatus.textContent = "Round complete · Select End session to stop the metronome";
   pdfCountdown.textContent = "Section complete";
   totalSessionCountdown.textContent = "Total time complete";
@@ -518,8 +585,13 @@ async function finishSession() {
 }
 
 function setRandomTempo() {
-  const randomTempo = Math.floor(Math.random() * (maximumBpm - minimumBpm + 1)) + minimumBpm;
-  setCurrentTempo(randomTempo, tempoMethodLabels.random);
+  const availableTempos = activeUseAnchorTempos
+    ? [...new Set([minimumBpm, targetTempo, maximumBpm])]
+    : null;
+  const randomTempo = availableTempos
+    ? availableTempos[Math.floor(Math.random() * availableTempos.length)]
+    : Math.floor(Math.random() * (maximumBpm - minimumBpm + 1)) + minimumBpm;
+  setCurrentTempo(randomTempo, getTempoMethodDescription("random", activeUseAnchorTempos));
 }
 
 function shuffle(items) {
@@ -851,6 +923,11 @@ startSessionButton.addEventListener("click", async () => {
     return;
   }
   if (!(await prepareSessionDurationPlan())) return;
+  if (useAnchorTempos && !hasValidAnchorTempos()) {
+    tempoMethodStatus.textContent = "Target tempo must be within the BPM range when using min, target, and max only";
+    targetTempoInput.focus();
+    return;
+  }
   if ((practiceMode === "single-section" || totalSessionSeconds === null) && methodMayBuildUp() && displayDurationSeconds < 60) {
     showBuildUpDurationError();
     return;
@@ -1071,12 +1148,20 @@ tempoMethodForm.addEventListener("submit", (event) => {
   event.preventDefault();
   if (!isTempoMethod(tempoMethodInput.value)) return;
   tempoMethod = tempoMethodInput.value;
+  updateTempoAnchorUi();
   if (methodMayBuildUp() && displayDurationSeconds < 60) {
     showBuildUpDurationError();
     return;
   }
   activeTempoMethod = tempoMethod;
-  tempoMethodStatus.textContent = `Next session: ${tempoMethodLabels[tempoMethod]}`;
+  activeUseAnchorTempos = useAnchorTempos;
+  tempoMethodStatus.textContent = `Next session: ${getTempoMethodDescription(tempoMethod, useAnchorTempos)}`;
+});
+tempoAnchorInput.addEventListener("change", () => {
+  useAnchorTempos = tempoAnchorInput.checked;
+  tempoMethodStatus.textContent = useAnchorTempos && !hasValidAnchorTempos()
+    ? "Target tempo must be within the BPM range when using min, target, and max only"
+    : `Next session: ${getTempoMethodDescription(tempoMethod, useAnchorTempos)}`;
 });
 openSectionEditorButton.addEventListener("click", async () => {
   sectionEditor.hidden = false;
@@ -1163,6 +1248,7 @@ sectionEditorNextPage.addEventListener("click", () => { if (editorPdf && editorP
 previousPage.addEventListener("click", () => currentPage > 1 && renderPage(currentPage - 1));
 nextPage.addEventListener("click", () => currentPage < documentPdf.numPages && renderPage(currentPage + 1));
 updatePracticeModeUi();
+updateTempoAnchorUi();
 rotationStatus.textContent = "Choose the folder containing the score to begin";
 viewer.hidden = true;
 loading.hidden = true;
