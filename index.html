@@ -155,12 +155,17 @@
           <label for="tempo-method-input">Tempo method</label>
           <select id="tempo-method-input">
             <option value="random">Random BPM</option>
-            <option value="half-target">Half target</option>
             <option value="build-up">Build up</option>
+            <option value="half-target">Half target</option>
+            <option value="target">Target</option>
           </select>
           <button type="submit">Set method</button>
           <span id="tempo-method-status">Random BPM</span>
         </form>
+        <div id="tempo-anchor-control" class="tempo-anchor-control">
+          <input id="tempo-anchor-input" type="checkbox" />
+          <label for="tempo-anchor-input">Use minimum, target, and maximum tempos only</label>
+        </div>
         <div class="dynamics-control">
           <span>Dynamics practice</span>
           <button id="dynamics-toggle" class="dynamics-toggle" type="button">Dynamics off</button>

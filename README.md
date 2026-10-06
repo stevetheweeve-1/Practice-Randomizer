@@ -50,7 +50,7 @@ To give one score folder its own tempo range and time signature, add a file name
 
 All three values are required. `minBpm` and `maxBpm` must be whole numbers from
 1 to 300, with the minimum no greater than the maximum. The time signature must
-use a numerator from 1 to 32 and a denominator of 1, 2, 4, 8, or 16. `targetTempo` is optional and must be a whole number from 1 to 300. If it is omitted, the app uses the value in its Target tempo field (60 BPM by default). The metronome continues at the target BPM after the PDF round completes, until **End session** is selected.
+use a numerator from 1 to 32 and a denominator of 1, 2, 4, 8, or 16. `targetTempo` is optional and must be a whole number from 1 to 300. If it is omitted, the app uses the value in its Target tempo field (60 BPM by default). When the round completes, the app shows the full score and the metronome continues at the target BPM until **End session** is selected.
 
 ## Section Editor
 
@@ -77,6 +77,6 @@ The file format is:
 
 The `source` path is relative to the folder you choose. Coordinates are stored as fractions of a page, which makes the file portable across screen sizes. Browser security prevents the app from writing directly back into the chosen folder, which is why it downloads the JSON file.
 
-Use **Tempo method** to choose **Random BPM**, **Half target**, or **Build up**. Build up requires a display time of at least 60 seconds. It resets to the low BPM whenever a new PDF appears, then calculates equal 30-second increases that reach the high BPM before the next PDF. Tempo method is chosen in the app and is not read from `practice-settings.json`; it defaults to Random BPM. If the file is absent or invalid, the app uses its normal starting values.
+Use **Tempo method** to choose **Random BPM**, **Build up**, **Half target**, or **Target**. **Target** keeps the metronome at the target tempo. Build up requires a display time of at least 60 seconds. It resets to the low BPM whenever a new PDF appears, then calculates equal 30-second increases that reach the high BPM before the next PDF. For Random BPM and Build up, select **Use minimum, target, and maximum tempos only** to limit Random BPM to those three values and divide Build up into equal low-, target-, and high-tempo stages. In that mode, the target must fall within the BPM range. Tempo method is chosen in the app and is not read from `practice-settings.json`; it defaults to Random BPM. If the file is absent or invalid, the app uses its normal starting values.
 
 Turn **Dynamics practice** on to display one randomly selected instruction for each PDF: piano, mezzo-piano, mezzo-forte, forte, crescendo, or decrescendo. The instruction remains until the next PDF appears. Dynamics practice defaults to off and is configured only in the app.
