@@ -145,9 +145,13 @@ function showPracticeView() {
   document.body.dataset.view = "practice";
 }
 
+function isSavedSectionsMode() {
+  return ["saved-sections", "saved-sections-ordered", "saved-sections-reverse"].includes(practiceMode);
+}
+
 function getActivePdfs() {
   if (practiceMode === "single-section") return selectedSinglePdf ? [selectedSinglePdf] : [];
-  if (practiceMode === "saved-sections") return savedSections;
+  if (isSavedSectionsMode()) return savedSections;
   return selectedFolderPdfs;
 }
 
@@ -171,7 +175,7 @@ function updatePracticeModeUi() {
   // semantic hidden attribute. This guarantees the picker is absent outside
   // One section mode even if a browser stylesheet overrides [hidden].
   singlePdfPicker.style.display = isSingle ? "flex" : "none";
-  const isSavedSections = practiceMode === "saved-sections";
+  const isSavedSections = isSavedSectionsMode();
   totalSessionForm.hidden = false;
   durationLabel.textContent = isSingle ? "Refresh tempo and dynamics every" : "Display each PDF for";
   button.firstChild.textContent = isSingle ? "Refresh now " : "Next now ";
@@ -605,6 +609,24 @@ function shuffle(items) {
   return shuffled;
 }
 
+function compareFragmentPositions(a, b) {
+  if (a.page !== b.page) return a.page - b.page;
+  // Hand-drawn crops of the same score line rarely share an exact top edge.
+  // Treat small vertical differences as one line and read left to right.
+  const sameLineTolerance = Math.min(a.height, b.height) / 4;
+  if (Math.abs(a.y - b.y) <= sameLineTolerance) return a.x - b.x || a.y - b.y;
+  return a.y - b.y;
+}
+
+function getOrderedSections(sections) {
+  // Use the earliest fragment, even when fragments were added out of order.
+  const firstFragment = (section) => section.fragments.reduce((first, fragment) =>
+    compareFragmentPositions(fragment, first) < 0 ? fragment : first);
+  return [...sections].sort((a, b) =>
+    a.sourcePath.localeCompare(b.sourcePath, undefined, { numeric: true })
+    || compareFragmentPositions(firstFragment(a), firstFragment(b)));
+}
+
 async function startNewRound() {
   const activePdfs = getActivePdfs();
   if (!activePdfs.length) {
@@ -612,7 +634,12 @@ async function startNewRound() {
     playlistIndex = 0;
     return;
   }
-  playlist = shuffle(activePdfs);
+  if (practiceMode === "saved-sections-ordered" || practiceMode === "saved-sections-reverse") {
+    playlist = getOrderedSections(activePdfs);
+    if (practiceMode === "saved-sections-reverse") playlist.reverse();
+  } else {
+    playlist = shuffle(activePdfs);
+  }
   playlistIndex = 0;
   if (totalSessionSeconds !== null && practiceMode !== "single-section") {
     if (sessionDurationPlan.length !== playlist.length) sessionDurationPlan = calculateSessionDurations(playlist.length);
@@ -898,7 +925,7 @@ async function showNextPdf() {
     fileName.textContent = result.name;
     collectionCount.textContent = practiceMode === "single-section"
       ? "One section · tempo and dynamics refresh every interval"
-      : practiceMode === "saved-sections"
+      : isSavedSectionsMode()
         ? playlist.length + " saved section" + (playlist.length === 1 ? "" : "s") + " · Round position " + (playlistIndex + 1) + " of " + playlist.length
         : playlist.length + " PDF" + (playlist.length === 1 ? "" : "s") + " in your collection · Round position " + (playlistIndex + 1) + " of " + playlist.length;
     playlistIndex += 1;
