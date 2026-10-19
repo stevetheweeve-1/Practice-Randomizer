@@ -118,3 +118,14 @@ body[data-view="practice"] .setup-heading { display: none; }
 .section-fragment-list button { padding: 4px 7px; background: #8d4b3d; }
 .open-section-editor { margin-top: 14px; }
 @media (max-width: 600px) { .section-editor { padding: 16px; } .section-editor-heading { flex-direction: column; } }
+
+.section-fragment-marker.editable-fragment { pointer-events: auto; cursor: move; }
+.fragment-handle { position: absolute; width: 10px; height: 10px; background: #fff; border: 1px solid #d85d31; }
+.handle-n, .handle-s { left: calc(50% - 5px); cursor: ns-resize; }
+.handle-e, .handle-w { top: calc(50% - 5px); cursor: ew-resize; }
+.handle-n, .handle-ne, .handle-nw { top: -5px; }
+.handle-s, .handle-se, .handle-sw { bottom: -5px; }
+.handle-w, .handle-nw, .handle-sw { left: -5px; }
+.handle-e, .handle-ne, .handle-se { right: -5px; }
+.handle-ne, .handle-sw { cursor: nesw-resize; }
+.handle-nw, .handle-se { cursor: nwse-resize; }

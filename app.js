@@ -61,6 +61,8 @@ const sectionEditor = document.querySelector("#section-editor");
 const openSectionEditorButton = document.querySelector("#open-section-editor");
 const closeSectionEditorButton = document.querySelector("#close-section-editor");
 const sectionSourceInput = document.querySelector("#section-source-input");
+const editSectionInput = document.querySelector("#edit-section-input");
+const cancelSectionButton = document.querySelector("#cancel-section-button");
 const sectionNameInput = document.querySelector("#section-name-input");
 const addFragmentButton = document.querySelector("#add-fragment-button");
 const sectionEditorCanvas = document.querySelector("#section-editor-canvas");
@@ -117,6 +119,9 @@ let editorPdf;
 let editorSourceItem = null;
 let editorPage = 1;
 let draftFragments = [];
+let editingSection = null;
+let fragmentGesture = null;
+let editorBaseline = "";
 let editorIsDrawing = false;
 let editorDragStart = null;
 let editorSelection = null;
@@ -701,7 +706,48 @@ function refreshSectionSourceList() {
     option.textContent = getRelativePdfPath(item);
     sectionSourceInput.append(option);
   });
+  if (editorSourceItem) sectionSourceInput.value = String(selectedFolderPdfs.indexOf(editorSourceItem));
   openSectionEditorButton.disabled = !selectedFolderPdfs.length;
+}
+
+function editorSnapshot() {
+  return JSON.stringify({ name: sectionNameInput.value, fragments: draftFragments });
+}
+
+function confirmDiscardSection() {
+  return editorSnapshot() === editorBaseline || (!draftFragments.length && !sectionNameInput.value)
+    || window.confirm("Discard unsaved section changes?");
+}
+
+function confirmDiscardSectionForExport() {
+  if (editorSnapshot() === editorBaseline || (!draftFragments.length && !sectionNameInput.value)) return true;
+  sectionEditorStatus.textContent = "Save or cancel your section changes before downloading.";
+  return false;
+}
+
+function refreshEditableSections() {
+  editSectionInput.replaceChildren(new Option("New section", ""));
+  savedSections.forEach((section, index) => {
+    if (section.sourcePath === getRelativePdfPath(editorSourceItem)) {
+      editSectionInput.append(new Option(section.name, String(index)));
+    }
+  });
+  editSectionInput.value = editingSection ? String(savedSections.indexOf(editingSection)) : "";
+}
+
+async function selectEditorSection(section) {
+  editingSection = section;
+  sectionNameInput.value = section?.name ?? "";
+  draftFragments = section ? section.fragments.map(fragment => ({ ...fragment })) : [];
+  editorIsDrawing = !section;
+  addFragmentButton.classList.toggle("active", editorIsDrawing);
+  addFragmentButton.textContent = editorIsDrawing ? "Drawing: drag on the page" : "Add fragment";
+  saveSectionButton.textContent = section ? "Save changes" : "Save section";
+  editorBaseline = editorSnapshot();
+  refreshEditableSections();
+  renderDraftFragments();
+  if (section) editorPage = draftFragments[0].page;
+  await renderEditorPage();
 }
 
 function renderDraftFragments() {
@@ -709,26 +755,6 @@ function renderDraftFragments() {
   draftFragments.forEach((fragment, index) => {
     const entry = document.createElement("li");
     entry.textContent = "Page " + fragment.page + " · fragment " + (index + 1);
-    const moveEarlier = document.createElement("button");
-    moveEarlier.type = "button";
-    moveEarlier.textContent = "↑";
-    moveEarlier.disabled = index === 0;
-    moveEarlier.title = "Move earlier";
-    moveEarlier.addEventListener("click", () => {
-      [draftFragments[index - 1], draftFragments[index]] = [draftFragments[index], draftFragments[index - 1]];
-      renderDraftFragments();
-      drawEditorMarkers();
-    });
-    const moveLater = document.createElement("button");
-    moveLater.type = "button";
-    moveLater.textContent = "↓";
-    moveLater.disabled = index === draftFragments.length - 1;
-    moveLater.title = "Move later";
-    moveLater.addEventListener("click", () => {
-      [draftFragments[index], draftFragments[index + 1]] = [draftFragments[index + 1], draftFragments[index]];
-      renderDraftFragments();
-      drawEditorMarkers();
-    });
     const remove = document.createElement("button");
     remove.type = "button";
     remove.textContent = "Remove";
@@ -737,7 +763,7 @@ function renderDraftFragments() {
       renderDraftFragments();
       renderEditorPage();
     });
-    entry.append(moveEarlier, moveLater, remove);
+    entry.append(remove);
     sectionFragmentList.append(entry);
   });
 }
@@ -771,7 +797,7 @@ function drawEditorMarkers() {
   const sourceSections = getSavedSectionsForSource(sourcePath);
   renderSavedSectionLegend(sourceSections);
   const savedFragments = sourceSections.flatMap(({ section, color }) => {
-    return section.fragments
+    return (section === editingSection ? [] : section.fragments)
       .filter((fragment) => fragment.page === editorPage)
       .map((fragment, index) => ({ fragment, sectionName: section.name, fragmentNumber: index + 1, color }));
   });
@@ -791,6 +817,13 @@ function drawEditorMarkers() {
     marker.append(label);
     marker.title = sectionName + " · saved fragment " + fragmentNumber;
     marker.setAttribute("aria-label", marker.title);
+    marker.style.pointerEvents = editorIsDrawing ? "none" : "auto";
+    marker.addEventListener("pointerdown", async (event) => {
+      event.stopPropagation();
+      if (!confirmDiscardSection()) return;
+      const section = sourceSections.find(item => item.section.fragments.includes(fragment)).section;
+      await selectEditorSection(section);
+    });
     sectionEditorOverlay.append(marker);
   });
   const pageFragments = draftFragments.filter((fragment) => fragment.page === editorPage);
@@ -802,6 +835,16 @@ function drawEditorMarkers() {
     marker.style.width = (fragment.width * 100) + "%";
     marker.style.height = (fragment.height * 100) + "%";
     marker.textContent = String(draftFragments.indexOf(fragment) + 1);
+    marker.dataset.fragmentIndex = String(draftFragments.indexOf(fragment));
+    if (!editorIsDrawing) {
+      marker.classList.add("editable-fragment");
+      for (const edge of ["n", "s", "e", "w", "ne", "nw", "se", "sw"]) {
+        const handle = document.createElement("span");
+        handle.className = "fragment-handle handle-" + edge;
+        handle.dataset.edge = edge;
+        marker.append(handle);
+      }
+    }
     sectionEditorOverlay.append(marker);
   });
 }
@@ -833,7 +876,8 @@ async function loadEditorSource() {
   addFragmentButton.classList.add("active");
   addFragmentButton.textContent = "Drawing: drag on the page";
   await renderEditorPage();
-  sectionEditorStatus.textContent = "Drag directly on the page to add a fragment in reading order.";
+  await selectEditorSection(null);
+  sectionEditorStatus.textContent = "Choose a saved section to edit, or draw a new section.";
 }
 
 function normalizeEditorSelection(event) {
@@ -1078,6 +1122,15 @@ singlePdfInput.addEventListener("change", () => {
 });
 folderButton.addEventListener("click", () => folderInput.click());
 folderInput.addEventListener("change", async () => {
+  if (!folderInput.files.length) return;
+  if (!confirmDiscardSection()) return;
+  editorSourceItem = null;
+  editorPdf = null;
+  editingSection = null;
+  draftFragments = [];
+  sectionNameInput.value = "";
+  editorBaseline = editorSnapshot();
+  sectionEditor.hidden = true;
   const selectedFiles = [...folderInput.files];
   selectedFolderPdfs = selectedFiles
     .filter((file) => file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"))
@@ -1201,9 +1254,20 @@ openSectionEditorButton.addEventListener("click", async () => {
   if (!editorSourceItem) await loadEditorSource();
 });
 closeSectionEditorButton.addEventListener("click", () => { sectionEditor.hidden = true; });
+editSectionInput.addEventListener("change", async () => {
+  const section = editSectionInput.value === "" ? null : savedSections[Number(editSectionInput.value)];
+  if (!confirmDiscardSection()) { refreshEditableSections(); return; }
+  await selectEditorSection(section);
+});
+cancelSectionButton.addEventListener("click", async () => {
+  await selectEditorSection(editingSection);
+  sectionEditorStatus.textContent = "Changes cancelled.";
+});
 sectionSourceInput.addEventListener("change", async () => {
-  draftFragments = [];
-  renderDraftFragments();
+  if (!confirmDiscardSection()) {
+    sectionSourceInput.value = String(selectedFolderPdfs.indexOf(editorSourceItem));
+    return;
+  }
   await loadEditorSource();
 });
 addFragmentButton.addEventListener("click", () => {
@@ -1211,10 +1275,19 @@ addFragmentButton.addEventListener("click", () => {
   editorIsDrawing = !editorIsDrawing;
   addFragmentButton.classList.toggle("active", editorIsDrawing);
   addFragmentButton.textContent = editorIsDrawing ? "Drawing: drag on the page" : "Add fragment";
+  drawEditorMarkers();
   sectionEditorStatus.textContent = editorIsDrawing ? "Drag a rectangle around the next fragment." : "Add fragments in reading order, then save the section.";
 });
 sectionEditorOverlay.addEventListener("pointerdown", (event) => {
-  if (!editorIsDrawing) return;
+  if (!editorIsDrawing) {
+    const marker = event.target.closest("[data-fragment-index]");
+    if (!marker) return;
+    const index = Number(marker.dataset.fragmentIndex);
+    fragmentGesture = { index, start: normalizeEditorSelection(event), original: { ...draftFragments[index] }, edge: event.target.dataset.edge ?? "" };
+    sectionEditorOverlay.setPointerCapture(event.pointerId);
+    event.preventDefault();
+    return;
+  }
   event.preventDefault();
   editorDragStart = normalizeEditorSelection(event);
   sectionEditorOverlay.setPointerCapture(event.pointerId);
@@ -1223,6 +1296,26 @@ sectionEditorOverlay.addEventListener("pointerdown", (event) => {
   sectionEditorOverlay.append(editorSelection);
 });
 sectionEditorOverlay.addEventListener("pointermove", (event) => {
+  if (fragmentGesture) {
+    const { index, start, original: f, edge } = fragmentGesture;
+    const point = normalizeEditorSelection(event);
+    const dx = point.x - start.x, dy = point.y - start.y;
+    const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+    let left = f.x, top = f.y, right = f.x + f.width, bottom = f.y + f.height;
+    if (!edge) {
+      left = clamp(f.x + dx, 0, 1 - f.width);
+      top = clamp(f.y + dy, 0, 1 - f.height);
+      right = left + f.width; bottom = top + f.height;
+    } else {
+      if (edge.includes("w")) left = clamp(f.x + dx, 0, right - .01);
+      if (edge.includes("e")) right = clamp(right + dx, left + .01, 1);
+      if (edge.includes("n")) top = clamp(f.y + dy, 0, bottom - .01);
+      if (edge.includes("s")) bottom = clamp(bottom + dy, top + .01, 1);
+    }
+    draftFragments[index] = { page: f.page, x: left, y: top, width: right - left, height: bottom - top };
+    drawEditorMarkers();
+    return;
+  }
   if (!editorDragStart || !editorSelection) return;
   const point = normalizeEditorSelection(event);
   const x = Math.min(editorDragStart.x, point.x);
@@ -1233,6 +1326,7 @@ sectionEditorOverlay.addEventListener("pointermove", (event) => {
   editorSelection.style.height = (Math.abs(point.y - editorDragStart.y) * 100) + "%";
 });
 sectionEditorOverlay.addEventListener("pointerup", (event) => {
+  if (fragmentGesture) { fragmentGesture = null; return; }
   if (!editorDragStart) return;
   const point = normalizeEditorSelection(event);
   const x = Math.min(editorDragStart.x, point.x);
@@ -1248,21 +1342,32 @@ sectionEditorOverlay.addEventListener("pointerup", (event) => {
   drawEditorMarkers();
   sectionEditorStatus.textContent = draftFragments.length + " fragment" + (draftFragments.length === 1 ? "" : "s") + " added. Continue or save the section.";
 });
-saveSectionButton.addEventListener("click", () => {
+sectionEditorOverlay.addEventListener("pointercancel", () => {
+  if (fragmentGesture) draftFragments[fragmentGesture.index] = fragmentGesture.original;
+  fragmentGesture = null;
+  editorDragStart = null;
+  editorSelection?.remove();
+  editorSelection = null;
+  drawEditorMarkers();
+});
+saveSectionButton.addEventListener("click", async () => {
   const name = sectionNameInput.value.trim();
   if (!name || !editorSourceItem || !draftFragments.length) {
     sectionEditorStatus.textContent = "Enter a name and add at least one fragment before saving.";
     return;
   }
-  savedSections.push({ type: "saved-section", name, sourcePath: getRelativePdfPath(editorSourceItem), sourceFile: editorSourceItem.file, fragments: draftFragments.map((fragment) => ({ ...fragment })) });
-  sectionNameInput.value = "";
-  draftFragments = [];
-  renderDraftFragments();
-  drawEditorMarkers();
+  const section = { type: "saved-section", name, sourcePath: getRelativePdfPath(editorSourceItem), sourceFile: editorSourceItem.file, fragments: draftFragments.map((fragment) => ({ ...fragment })) };
+  if (editingSection) savedSections[savedSections.indexOf(editingSection)] = section;
+  else savedSections.push(section);
+  populateSinglePdfPicker();
+  playlist = [];
+  playlistIndex = 0;
+  await selectEditorSection(null);
   updatePracticeModeUi();
-  sectionEditorStatus.textContent = name + " saved. Download the JSON when you are ready.";
+  sectionEditorStatus.textContent = name + " saved in this session. Download score-sections.json to keep changes.";
 });
 exportSectionsButton.addEventListener("click", () => {
+  if (!confirmDiscardSectionForExport()) return;
   if (!savedSections.length) {
     sectionEditorStatus.textContent = "Save at least one saved section first.";
     return;
