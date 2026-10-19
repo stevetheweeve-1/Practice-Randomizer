@@ -96,11 +96,14 @@
           <p class="section-editor-help">Choose a source PDF, name a section, then drag a rectangle around each line or fragment in reading order.</p>
           <div class="section-editor-actions">
             <button id="save-section-button" type="button">Save section</button>
+            <button id="cancel-section-button" type="button">Cancel changes</button>
             <button id="export-sections-button" type="button">Download score-sections.json</button>
           </div>
           <div class="section-editor-controls">
             <label for="section-source-input">Source PDF</label>
             <select id="section-source-input"></select>
+            <label for="edit-section-input">Edit section</label>
+            <select id="edit-section-input"><option value="">New section</option></select>
             <label for="section-name-input">Section name</label>
             <input id="section-name-input" type="text" placeholder="e.g. Measures 9–20" />
             <button id="add-fragment-button" type="button">Add fragment</button>
