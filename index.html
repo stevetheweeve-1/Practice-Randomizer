@@ -11,6 +11,7 @@
       <div class="top-session-control">
         <div class="session-buttons">
           <button id="sound-toggle" class="sound-toggle on" type="button">Sound off</button>
+          <label class="accent-control"><input id="accent-toggle" type="checkbox" checked /> Accent first beat</label>
           <button id="start-session-button" class="start-session-button" type="button">Start session</button>
           <button id="stop-button" class="stop-button" type="button" disabled>Stop session</button>
           <button id="end-session-button" class="end-session-button" type="button" hidden>End session</button>
@@ -134,7 +135,7 @@
           <label for="time-signature-input">Time signature</label>
           <input id="time-signature-input" type="text" value="4/4" pattern="[0-9]+/[0-9]+" inputmode="text" required />
           <button type="submit">Set</button>
-          <span id="time-signature-status">First beat accented</span>
+          <span id="time-signature-status">4 beats per measure</span>
         </form>
         <form id="tempo-range-form" class="tempo-range-form">
           <label for="min-bpm-input">BPM range</label>
