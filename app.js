@@ -1096,10 +1096,10 @@ folderInput.addEventListener("change", async () => {
     }
   }
   applyPracticeSettings(settings, "practice-settings.json");
-  const sectionsFile = selectedFiles.find((file) => {
-    const pathParts = file.webkitRelativePath.split("/");
-    return file.name === "practice-sections.json" && pathParts.length === 2;
-  });
+  const sectionsFile = ["score-sections.json", "practice-sections.json"]
+    .map((name) => selectedFiles.find((file) =>
+      file.name === name && file.webkitRelativePath.split("/").length === 2))
+    .find(Boolean);
   savedSections = [];
   if (sectionsFile) {
     try {
@@ -1129,7 +1129,7 @@ folderInput.addEventListener("change", async () => {
 
   const folderName = selectedFolderPdfs[0].file.webkitRelativePath.split("/")[0];
   folderStatus.textContent = selectedFolderPdfs.length + " full score PDF" + (selectedFolderPdfs.length === 1 ? "" : "s") + " from " + folderName;
-  if (savedSections.length) sectionEditorStatus.textContent = savedSections.length + " saved section" + (savedSections.length === 1 ? "" : "s") + " imported from practice-sections.json";
+  if (savedSections.length) sectionEditorStatus.textContent = savedSections.length + " saved section" + (savedSections.length === 1 ? "" : "s") + " imported from " + sectionsFile.name;
   playlist = [];
   playlistIndex = 0;
   clearTimeout(rotationTimer);
@@ -1270,10 +1270,10 @@ exportSectionsButton.addEventListener("click", () => {
   const data = { version: 1, sections: savedSections.map((section) => ({ name: section.name, source: section.sourcePath, fragments: section.fragments })) };
   const download = document.createElement("a");
   download.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2) + "\n"], { type: "application/json" }));
-  download.download = "practice-sections.json";
+  download.download = "score-sections.json";
   download.click();
   setTimeout(() => URL.revokeObjectURL(download.href), 0);
-  sectionEditorStatus.textContent = "Downloaded practice-sections.json — place it in the folder you chose.";
+  sectionEditorStatus.textContent = "Downloaded score-sections.json — place it in the folder you chose.";
 });
 sectionEditorPreviousPage.addEventListener("click", () => { if (editorPage > 1) { editorPage -= 1; renderEditorPage(); } });
 sectionEditorNextPage.addEventListener("click", () => { if (editorPdf && editorPage < editorPdf.numPages) { editorPage += 1; renderEditorPage(); } });
