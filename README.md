@@ -18,7 +18,7 @@ Set the number of seconds in **Display each PDF for** and press **Apply** to cha
 
 Use **Choose score folder** to select any folder on your computer. Its score PDFs become the active rotation for the current browser session; no files are uploaded or copied.
 
-Keep the full-score PDF, `practice-settings.json`, and (when you create sections) `practice-sections.json` in one parent folder. **Full score** displays the PDFs in that folder. **Saved sections (random)** rotates the sections defined in `practice-sections.json`. **One section** lets you select one saved section and keeps it displayed while tempo and dynamics refresh each interval.
+Keep the full-score PDF, `practice-settings.json`, and (when you create sections) `score-sections.json` in one parent folder. **Full score** displays the PDFs in that folder. **Saved sections (random)** rotates the sections defined in `score-sections.json`. **One section** lets you select one saved section and keeps it displayed while tempo and dynamics refresh each interval.
 
 Choose **Saved Sections** to practice from the start of the PDF to the end, or **Saved Sections (reverse)** to practice from the end back to the start. Sections are ordered by their earliest fragment's page and position, regardless of when they were saved. Crops whose top edges differ by no more than a quarter of the shorter crop's height are treated as the same line and ordered left to right. Each section keeps its fragments in their saved reading order. With multiple source PDFs, source paths are sorted by name (using numeric order for numbers), then sections by position; reverse mode reverses that entire sequence. Both modes display every section once before the round completes.
 
@@ -58,7 +58,9 @@ use a numerator from 1 to 32 and a denominator of 1, 2, 4, 8, or 16. `targetTemp
 
 Use **Open Section Editor** after choosing a folder to turn a full-score PDF into practice sections. Select the source PDF, enter a section name, click **Add fragment**, and drag around each line in reading order. Previously saved fragments for the active score and page appear as color-coded dashed overlays, with a legend below the page controls, while the section you are creating remains orange. Use the page buttons when a section spans pages. The practice display stacks the saved fragments vertically. The list below the page controls their reading order; use ↑, ↓, or **Remove** to adjust a draft before saving.
 
-Click **Save section** to keep the section in the current browser session, then **Download practice-sections.json**. Put that downloaded file at the top level of the same folder as the source PDF. When you select the folder again, the app imports it automatically; choose **Saved sections (random)** as the practice mode to rotate those sections.
+Click **Save section** to keep the section in the current browser session, then **Download score-sections.json**. Put that downloaded file at the top level of the same folder as the source PDF. When you select the folder again, the app imports it automatically; choose **Saved sections (random)** as the practice mode to rotate those sections.
+
+Existing `practice-sections.json` files still import automatically. You can rename them to `score-sections.json` without changing their contents. If both files exist at the top level, the app uses only `score-sections.json`. New downloads always use the new filename.
 
 The file format is:
 
