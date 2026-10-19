@@ -18,6 +18,7 @@ const collectionCount = document.querySelector("#collection-count");
 const rotationStatus = document.querySelector("#rotation-status");
 const button = document.querySelector("#another-pdf");
 const soundToggle = document.querySelector("#sound-toggle");
+const accentToggle = document.querySelector("#accent-toggle");
 const beatLight = document.querySelector("#beat-light");
 const bpmLabel = document.querySelector("#bpm-label");
 const dynamicsLabel = document.querySelector("#dynamics-label");
@@ -93,6 +94,7 @@ let practiceMode = "saved-sections";
 let isStopped = true;
 let sessionStarted = false;
 let metronomeEnabled = true;
+let accentEnabled = accentToggle.checked;
 let beatsPerMeasure = 4;
 let beatInMeasure = 0;
 let minimumBpm = 60;
@@ -456,7 +458,7 @@ function applyPracticeSettings(settings, source = "the defaults") {
 }
 
 function tick() {
-  const isAccent = beatInMeasure === 0;
+  const isAccent = accentEnabled && beatInMeasure === 0;
   beatInMeasure = (beatInMeasure + 1) % beatsPerMeasure;
   beatLight.classList.remove("beat");
   // Restart the visual animation on every beat.
@@ -952,6 +954,9 @@ soundToggle.addEventListener("click", () => {
   if (metronomeEnabled) return disableMetronome();
   return enableMetronome();
 });
+accentToggle.addEventListener("change", () => {
+  accentEnabled = accentToggle.checked;
+});
 dynamicsToggle.addEventListener("click", () => {
   dynamicsEnabled = !dynamicsEnabled;
   dynamicsToggle.textContent = dynamicsEnabled ? "Dynamics on" : "Dynamics off";
@@ -1117,7 +1122,7 @@ timeSignatureForm.addEventListener("submit", (event) => {
   }
   beatsPerMeasure = numerator;
   timeSignatureInput.value = `${numerator}/${denominator}`;
-  timeSignatureStatus.textContent = `First beat accented every ${numerator} beats`;
+  timeSignatureStatus.textContent = `${numerator} beats per measure`;
   if (!isStopped) startVisualMetronome();
 });
 tempoRangeForm.addEventListener("submit", (event) => {
