@@ -42,6 +42,8 @@ const practiceModeStatus = document.querySelector("#practice-mode-status");
 const singlePdfPicker = document.querySelector("#single-pdf-picker");
 const singlePdfInput = document.querySelector("#single-pdf-input");
 const singlePdfStatus = document.querySelector("#single-pdf-status");
+const clickPatternInput = document.querySelector("#click-pattern-input");
+const twoClicksOption = document.querySelector("#two-clicks-option");
 const timeSignatureForm = document.querySelector("#time-signature-form");
 const timeSignatureInput = document.querySelector("#time-signature-input");
 const timeSignatureStatus = document.querySelector("#time-signature-status");
@@ -98,6 +100,8 @@ let sessionStarted = false;
 let metronomeEnabled = true;
 let accentEnabled = accentToggle.checked;
 let beatsPerMeasure = 4;
+let beatDenominator = 4;
+let clickPattern = "beat";
 let beatInMeasure = 0;
 let minimumBpm = 60;
 let maximumBpm = 120;
@@ -223,7 +227,7 @@ function parseTimeSignature(value) {
   const denominator = match && Number(match[2]);
   const allowedDenominators = [1, 2, 4, 8, 16];
   if (!numerator || numerator > 32 || !allowedDenominators.includes(denominator)) return null;
-  return { numerator, value: `${numerator}/${denominator}` };
+  return { numerator, denominator, value: `${numerator}/${denominator}` };
 }
 
 const tempoMethodLabels = {
@@ -438,7 +442,10 @@ function applyPracticeSettings(settings, source = "the defaults") {
   if (!isValid) {
     minimumBpm = defaultPracticeSettings.minimumBpm;
     maximumBpm = defaultPracticeSettings.maximumBpm;
-    beatsPerMeasure = parseTimeSignature(defaultPracticeSettings.timeSignature).numerator;
+    const defaultSignature = parseTimeSignature(defaultPracticeSettings.timeSignature);
+    beatsPerMeasure = defaultSignature.numerator;
+    beatDenominator = defaultSignature.denominator;
+    updateClickPatternOptions();
     minBpmInput.value = minimumBpm;
     maxBpmInput.value = maximumBpm;
     timeSignatureInput.value = defaultPracticeSettings.timeSignature;
@@ -458,6 +465,8 @@ function applyPracticeSettings(settings, source = "the defaults") {
   targetTempoInput.value = targetTempo;
   targetTempoStatus.textContent = `${targetTempo} BPM from ${source}`;
   beatsPerMeasure = timeSignature.numerator;
+  beatDenominator = timeSignature.denominator;
+  updateClickPatternOptions();
   minBpmInput.value = minimum;
   maxBpmInput.value = maximum;
   timeSignatureInput.value = timeSignature.value;
@@ -466,9 +475,25 @@ function applyPracticeSettings(settings, source = "the defaults") {
   return true;
 }
 
+function updateClickPatternOptions() {
+  const supportsTwo = beatsPerMeasure % 4 === 0;
+  twoClicksOption.hidden = !supportsTwo;
+  twoClicksOption.disabled = !supportsTwo;
+  if (!supportsTwo && clickPattern === "two") {
+    clickPattern = "beat";
+    clickPatternInput.value = clickPattern;
+  }
+}
+
+function getBeatsPerClick() {
+  if (clickPattern === "bar") return beatsPerMeasure;
+  if (clickPattern === "two") return beatsPerMeasure / 2;
+  return 1;
+}
+
 function tick() {
   const isAccent = accentEnabled && beatInMeasure === 0;
-  beatInMeasure = (beatInMeasure + 1) % beatsPerMeasure;
+  beatInMeasure = (beatInMeasure + getBeatsPerClick()) % beatsPerMeasure;
   beatLight.classList.remove("beat");
   // Restart the visual animation on every beat.
   void beatLight.offsetWidth;
@@ -507,7 +532,7 @@ function startVisualMetronome() {
   clearInterval(visualMetronomeTimer);
   beatInMeasure = 0;
   tick();
-  visualMetronomeTimer = setInterval(tick, 60000 / currentBpm);
+  visualMetronomeTimer = setInterval(tick, (60000 / currentBpm) * (4 / beatDenominator) * getBeatsPerClick());
 }
 
 async function showFullScoreAtSessionEnd() {
@@ -1189,6 +1214,11 @@ folderInput.addEventListener("change", async () => {
   clearInterval(countdownTimer);
   showNextPdf();
 });
+clickPatternInput.addEventListener("change", () => {
+  clickPattern = clickPatternInput.value;
+  updateClickPatternOptions();
+  if (sessionStarted) startVisualMetronome();
+});
 timeSignatureForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const match = timeSignatureInput.value.trim().match(/^(\d+)\/(\d+)$/);
@@ -1201,6 +1231,8 @@ timeSignatureForm.addEventListener("submit", (event) => {
     return;
   }
   beatsPerMeasure = numerator;
+  beatDenominator = denominator;
+  updateClickPatternOptions();
   timeSignatureInput.value = `${numerator}/${denominator}`;
   timeSignatureStatus.textContent = `${numerator} beats per measure`;
   if (!isStopped) startVisualMetronome();

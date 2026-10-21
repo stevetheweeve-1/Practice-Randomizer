@@ -129,3 +129,6 @@ body[data-view="practice"] .setup-heading { display: none; }
 .handle-e, .handle-ne, .handle-se { right: -5px; }
 .handle-ne, .handle-sw { cursor: nesw-resize; }
 .handle-nw, .handle-se { cursor: nwse-resize; }
+
+.click-pattern-control { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
+.click-pattern-control select { border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; padding: 7px; }
