@@ -18,6 +18,8 @@ const collectionCount = document.querySelector("#collection-count");
 const rotationStatus = document.querySelector("#rotation-status");
 const button = document.querySelector("#another-pdf");
 const soundToggle = document.querySelector("#sound-toggle");
+const metronomeVolumeInput = document.querySelector("#metronome-volume");
+const metronomeVolumeValue = document.querySelector("#metronome-volume-value");
 const accentToggle = document.querySelector("#accent-toggle");
 const beatLight = document.querySelector("#beat-light");
 const bpmLabel = document.querySelector("#bpm-label");
@@ -90,6 +92,8 @@ let currentDisplayDurationSeconds = displayDurationSeconds;
 let totalSessionSeconds = null;
 let sessionDurationPlan = [];
 let audioContext;
+let metronomeGain;
+let metronomeVolume = volumeToGain(Number(metronomeVolumeInput.value));
 let visualMetronomeTimer;
 let currentBpm = 60;
 let selectedFolderPdfs = [];
@@ -491,6 +495,13 @@ function getBeatsPerClick() {
   return 1;
 }
 
+function volumeToGain(percent) {
+  // Equal slider steps represent equal decibel changes, with zero fully muted.
+  if (percent === 0) return 0;
+  const decibels = -40 * (1 - percent / 100);
+  return 10 ** (decibels / 20);
+}
+
 function tick() {
   const isAccent = accentEnabled && beatInMeasure === 0;
   beatInMeasure = (beatInMeasure + getBeatsPerClick()) % beatsPerMeasure;
@@ -505,15 +516,20 @@ function tick() {
   const gain = audioContext.createGain();
   oscillator.frequency.value = isAccent ? 1100 : 880;
   gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
-  gain.gain.exponentialRampToValueAtTime(isAccent ? 0.3 : 0.14, audioContext.currentTime + 0.004);
+  gain.gain.exponentialRampToValueAtTime(isAccent ? 1.0 : 0.8, audioContext.currentTime + 0.004);
   gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.055);
-  oscillator.connect(gain).connect(audioContext.destination);
+  oscillator.connect(gain).connect(metronomeGain);
   oscillator.start();
   oscillator.stop(audioContext.currentTime + 0.06);
 }
 
 async function enableMetronome() {
   audioContext ??= new AudioContext();
+  if (!metronomeGain) {
+    metronomeGain = audioContext.createGain();
+    metronomeGain.gain.value = metronomeVolume;
+    metronomeGain.connect(audioContext.destination);
+  }
   await audioContext.resume();
   metronomeEnabled = true;
   if (!isStopped) startVisualMetronome();
@@ -1049,6 +1065,15 @@ button.addEventListener("click", showNextPdf);
 soundToggle.addEventListener("click", () => {
   if (metronomeEnabled) return disableMetronome();
   return enableMetronome();
+});
+metronomeVolumeInput.addEventListener("input", () => {
+  metronomeVolume = volumeToGain(Number(metronomeVolumeInput.value));
+  const percentage = `${metronomeVolumeInput.value}%`;
+  metronomeVolumeValue.value = percentage;
+  metronomeVolumeInput.setAttribute("aria-valuetext", percentage);
+  if (metronomeGain) {
+    metronomeGain.gain.setTargetAtTime(metronomeVolume, audioContext.currentTime, 0.01);
+  }
 });
 accentToggle.addEventListener("change", () => {
   accentEnabled = accentToggle.checked;

@@ -26,6 +26,8 @@ Use **Total session time** to set the length of the whole round in minutes. The 
 
 Press **Sound on** once to start the metronome. Press **Sound off** to silence the clicks while keeping the visual beat indicator running. Browsers require this one interaction before allowing audio playback.
 
+Use the **Volume** slider beside the sound button to adjust metronome loudness from 0% (silent) to 100% (full volume), starting at 75%. The slider uses a logarithmic audio scale: nonzero positions span approximately −40 dB to 0 dB, with 50% at −20 dB and 75% at −10 dB. At full volume, peak amplitude is 0.80 for regular beats and 1.00 for accented beats. Changes apply immediately. The setting lasts for the current page session, including when sound is turned off and back on.
+
 Use **Stop session** to pause PDF rotation while the metronome continues at its current tempo. Press **Resume session** to continue the displayed PDF with its remaining time and Build up progression.
 
 Choose the folder and practice settings on the setup screen first. Starting the session switches to a focused PDF practice screen; use **End session** to return to setup.

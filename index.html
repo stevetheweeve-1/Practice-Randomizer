@@ -11,6 +11,11 @@
       <div class="top-session-control">
         <div class="session-buttons">
           <button id="sound-toggle" class="sound-toggle on" type="button">Sound off</button>
+          <div class="volume-control">
+            <label for="metronome-volume">Volume</label>
+            <input id="metronome-volume" type="range" min="0" max="100" step="1" value="75" aria-valuetext="75%" />
+            <output id="metronome-volume-value" for="metronome-volume">75%</output>
+          </div>
           <label class="accent-control"><input id="accent-toggle" type="checkbox" checked /> Accent first beat</label>
           <button id="start-session-button" class="start-session-button" type="button">Start session</button>
           <button id="stop-button" class="stop-button" type="button" disabled>Stop session</button>

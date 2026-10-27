@@ -15,6 +15,9 @@ h1 { font-size: clamp(2.8rem, 7vw, 5.8rem); line-height: .94; margin: 0; }
 .beat-light.beat { animation: beat .22s ease-out; }
 .sound-toggle { padding: 8px 12px; background: #66745d; font-size: .63rem; }
 .sound-toggle.on { background: #284c3a; }
+.volume-control { display: inline-flex; align-items: center; gap: 6px; color: #536055; font-size: .63rem; }
+.volume-control input { width: 100px; margin: 0; accent-color: #284c3a; }
+.volume-control output { min-width: 4ch; text-align: right; }
 .accent-control { display: inline-flex; align-items: center; gap: 6px; color: #536055; font-size: .63rem; }
 .accent-control input { accent-color: #284c3a; }
 .session-buttons { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
