@@ -128,19 +128,18 @@
           <p id="section-editor-status" class="section-editor-status">Choose a folder, then open the editor.</p>
         </section>
         <button id="open-section-editor" class="open-section-editor" type="button" disabled>Open Section Editor</button>
-        <form id="total-session-form" class="total-session-form">
+        <div id="total-session-form" class="total-session-form">
           <label for="total-session-input">Total session time</label>
-          <input id="total-session-input" type="number" min="1" max="1440" step="0.1" inputmode="decimal" required />
+          <input id="total-session-input" type="number" min="1" max="1440" step="0.1" inputmode="decimal" />
           <span>minutes</span>
-          <button type="submit">Apply total</button>
-          <span id="total-session-status">Optional</span>
-        </form>
-        <form id="duration-form" class="duration-form">
+          <span id="total-session-status" aria-live="polite">Optional</span>
+        </div>
+        <div class="duration-form">
           <label id="duration-label" for="duration-input">Display each PDF for</label>
           <input id="duration-input" type="number" min="1" max="3600" value="60" inputmode="numeric" required />
           <span>seconds</span>
-          <button type="submit">Apply</button>
-        </form>
+          <span id="duration-status" aria-live="polite"></span>
+        </div>
         <form id="time-signature-form" class="time-signature-form">
           <label for="time-signature-input">Time signature</label>
           <input id="time-signature-input" type="text" value="4/4" pattern="[0-9]+/[0-9]+" inputmode="text" required />
@@ -156,22 +155,20 @@
           </select>
           <span>Tempo is quarter-note BPM</span>
         </div>
-        <form id="tempo-range-form" class="tempo-range-form">
+        <div class="tempo-range-form">
           <label for="min-bpm-input">BPM range</label>
           <input id="min-bpm-input" type="number" min="1" max="300" value="60" inputmode="numeric" required aria-label="Lowest BPM" />
           <span>to</span>
           <input id="max-bpm-input" type="number" min="1" max="300" value="120" inputmode="numeric" required aria-label="Highest BPM" />
-          <button type="submit">Set range</button>
           <span id="tempo-range-status">Inclusive</span>
-        </form>
-        <form id="target-tempo-form" class="target-tempo-form">
+        </div>
+        <div class="target-tempo-form">
           <label for="target-tempo-input">Target tempo</label>
           <input id="target-tempo-input" type="number" min="1" max="300" value="60" inputmode="numeric" required aria-label="Target tempo" />
           <span>BPM</span>
-          <button type="submit">Set target</button>
           <span id="target-tempo-status">60 BPM</span>
-        </form>
-        <form id="tempo-method-form" class="tempo-method-form">
+        </div>
+        <div class="tempo-method-form">
           <label for="tempo-method-input">Tempo method</label>
           <select id="tempo-method-input">
             <option value="random">Random BPM</option>
@@ -179,9 +176,8 @@
             <option value="half-target">Half target</option>
             <option value="target">Target</option>
           </select>
-          <button type="submit">Set method</button>
           <span id="tempo-method-status">Random BPM</span>
-        </form>
+        </div>
         <div id="tempo-anchor-control" class="tempo-anchor-control">
           <input id="tempo-anchor-input" type="checkbox" />
           <label for="tempo-anchor-input">Use minimum, target, and maximum tempos only</label>
