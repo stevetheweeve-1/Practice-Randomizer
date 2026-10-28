@@ -15,9 +15,10 @@ const fileName = document.querySelector("#file-name");
 const emptyState = document.querySelector("#empty-state");
 const waitingState = document.querySelector("#waiting-state");
 const collectionCount = document.querySelector("#collection-count");
+const roundPosition = document.querySelector("#round-position");
 const rotationStatus = document.querySelector("#rotation-status");
 const button = document.querySelector("#another-pdf");
-const soundToggle = document.querySelector("#sound-toggle");
+const volumeToggle = document.querySelector("#volume-toggle");
 const metronomeVolumeInput = document.querySelector("#metronome-volume");
 const metronomeVolumeValue = document.querySelector("#metronome-volume-value");
 const accentToggle = document.querySelector("#accent-toggle");
@@ -46,8 +47,8 @@ const singlePdfInput = document.querySelector("#single-pdf-input");
 const singlePdfStatus = document.querySelector("#single-pdf-status");
 const clickPatternInput = document.querySelector("#click-pattern-input");
 const twoClicksOption = document.querySelector("#two-clicks-option");
-const timeSignatureForm = document.querySelector("#time-signature-form");
-const timeSignatureInput = document.querySelector("#time-signature-input");
+const beatsPerBarInput = document.querySelector("#beats-per-bar-input");
+const noteValueInput = document.querySelector("#note-value-input");
 const timeSignatureStatus = document.querySelector("#time-signature-status");
 const minBpmInput = document.querySelector("#min-bpm-input");
 const maxBpmInput = document.querySelector("#max-bpm-input");
@@ -133,7 +134,7 @@ let editorSelection = null;
 const defaultPracticeSettings = Object.freeze({
   minimumBpm,
   maximumBpm,
-  timeSignature: timeSignatureInput.value.trim(),
+  timeSignature: `${beatsPerBarInput.value}/${noteValueInput.value}`,
   targetTempo,
 });
 
@@ -227,7 +228,7 @@ function parseTimeSignature(value) {
   const numerator = match && Number(match[1]);
   const denominator = match && Number(match[2]);
   const allowedDenominators = [1, 2, 4, 8, 16];
-  if (!numerator || numerator > 32 || !allowedDenominators.includes(denominator)) return null;
+  if (!Number.isInteger(numerator) || numerator < 1 || numerator > 32 || !allowedDenominators.includes(denominator)) return null;
   return { numerator, denominator, value: `${numerator}/${denominator}` };
 }
 
@@ -449,9 +450,10 @@ function applyPracticeSettings(settings, source = "the defaults") {
     updateClickPatternOptions();
     minBpmInput.value = minimumBpm;
     maxBpmInput.value = maximumBpm;
-    timeSignatureInput.value = defaultPracticeSettings.timeSignature;
+    beatsPerBarInput.value = beatsPerMeasure;
+    noteValueInput.value = beatDenominator;
     tempoRangeStatus.textContent = "Using default range";
-    timeSignatureStatus.textContent = "Using default time signature";
+    timeSignatureStatus.textContent = `${beatsPerMeasure}/${beatDenominator}`;
     targetTempo = defaultPracticeSettings.targetTempo;
     targetTempoInput.value = targetTempo;
     targetTempoStatus.textContent = `Default target: ${targetTempo} BPM`;
@@ -470,9 +472,10 @@ function applyPracticeSettings(settings, source = "the defaults") {
   updateClickPatternOptions();
   minBpmInput.value = minimum;
   maxBpmInput.value = maximum;
-  timeSignatureInput.value = timeSignature.value;
+  beatsPerBarInput.value = beatsPerMeasure;
+  noteValueInput.value = beatDenominator;
   tempoRangeStatus.textContent = `${minimum}–${maximum} BPM from ${source}`;
-  timeSignatureStatus.textContent = `${timeSignature.value} from ${source}`;
+  timeSignatureStatus.textContent = timeSignature.value;
   return true;
 }
 
@@ -530,15 +533,17 @@ async function enableMetronome() {
   await audioContext.resume();
   metronomeEnabled = true;
   if (!isStopped) startVisualMetronome();
-  soundToggle.textContent = "Sound off";
-  soundToggle.classList.add("on");
+  volumeToggle.textContent = "Volume";
+  volumeToggle.setAttribute("aria-pressed", "false");
+  volumeToggle.title = "Mute metronome";
 }
 
 async function disableMetronome() {
   metronomeEnabled = false;
   await audioContext?.suspend();
-  soundToggle.textContent = "Sound on";
-  soundToggle.classList.remove("on");
+  volumeToggle.textContent = "Muted";
+  volumeToggle.setAttribute("aria-pressed", "true");
+  volumeToggle.title = "Unmute metronome";
 }
 
 function startVisualMetronome() {
@@ -592,6 +597,7 @@ async function completeRound() {
     ? `Full score displayed · Metronome continues at your target tempo of ${targetTempo} BPM.`
     : `Metronome continues at your target tempo of ${targetTempo} BPM.`;
   rotationStatus.textContent = "Round complete · Select End session to stop the metronome";
+  roundPosition.textContent = "Round complete";
   pdfCountdown.textContent = "Section complete";
   totalSessionCountdown.textContent = "Total time complete";
   button.disabled = true;
@@ -623,6 +629,7 @@ async function finishSession() {
   rotationStatus.textContent = "Press Start session to begin a new round";
   pdfCountdown.textContent = "Round complete";
   totalSessionCountdown.textContent = "No session active";
+  roundPosition.textContent = "";
   button.disabled = true;
   startSessionButton.textContent = "Start session";
   startSessionButton.disabled = false;
@@ -698,9 +705,7 @@ function startCountdown() {
   const endsAt = Date.now() + remainingMs;
   const updateCountdown = () => {
     const secondsLeft = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
-    rotationStatus.textContent = practiceMode === "single-section"
-      ? "Tempo and dynamics refresh in " + secondsLeft + "s"
-      : "Next PDF in " + secondsLeft + "s · " + (playlist.length - playlistIndex) + " remaining this round";
+    rotationStatus.textContent = "";
     pdfCountdown.textContent = "Section: " + secondsLeft + "s left";
   };
   updateCountdown();
@@ -981,6 +986,7 @@ async function showNextPdf() {
       emptyState.hidden = false;
       fileName.textContent = "Your collection is empty";
       collectionCount.textContent = "";
+      roundPosition.textContent = "";
       rotationStatus.textContent = "";
       pdfCountdown.textContent = "No PDF selected";
       return;
@@ -1005,11 +1011,10 @@ async function showNextPdf() {
     startDynamicsPractice();
     pageControls.hidden = result.type === "saved-section";
     fileName.textContent = result.name;
-    collectionCount.textContent = practiceMode === "single-section"
-      ? "One section · tempo and dynamics refresh every interval"
-      : isSavedSectionsMode()
-        ? playlist.length + " saved section" + (playlist.length === 1 ? "" : "s") + " · Round position " + (playlistIndex + 1) + " of " + playlist.length
-        : playlist.length + " PDF" + (playlist.length === 1 ? "" : "s") + " in your collection · Round position " + (playlistIndex + 1) + " of " + playlist.length;
+    collectionCount.textContent = "";
+    roundPosition.textContent = practiceMode === "single-section"
+      ? ""
+      : "Round position " + (playlistIndex + 1) + " of " + playlist.length;
     playlistIndex += 1;
     startCountdown();
   } catch (error) {
@@ -1017,6 +1022,7 @@ async function showNextPdf() {
     fileName.textContent = "Couldn’t load your collection";
     const detail = error instanceof Error && error.message ? error.message : "Unknown PDF rendering error";
     collectionCount.textContent = "Try choosing the folder again, then start a new session.";
+    roundPosition.textContent = "";
     rotationStatus.textContent = "Load error: " + detail;
   } finally {
     button.disabled = isStopped;
@@ -1059,7 +1065,7 @@ startSessionButton.addEventListener("click", async () => {
   showNextPdf();
 });
 button.addEventListener("click", showNextPdf);
-soundToggle.addEventListener("click", () => {
+volumeToggle.addEventListener("click", () => {
   if (metronomeEnabled) return disableMetronome();
   return enableMetronome();
 });
@@ -1247,24 +1253,22 @@ clickPatternInput.addEventListener("change", () => {
   updateClickPatternOptions();
   if (sessionStarted) startVisualMetronome();
 });
-timeSignatureForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const match = timeSignatureInput.value.trim().match(/^(\d+)\/(\d+)$/);
-  const numerator = match && Number(match[1]);
-  const denominator = match && Number(match[2]);
+function applyTimeSignature() {
+  const numerator = Number(beatsPerBarInput.value);
+  const denominator = Number(noteValueInput.value);
   const allowedDenominators = [1, 2, 4, 8, 16];
-  if (!numerator || numerator > 32 || !allowedDenominators.includes(denominator)) {
+  if (!Number.isInteger(numerator) || numerator < 1 || numerator > 32 || !allowedDenominators.includes(denominator)) {
     timeSignatureStatus.textContent = "Use 1–32 / 1, 2, 4, 8, or 16";
-    timeSignatureInput.focus();
     return;
   }
   beatsPerMeasure = numerator;
   beatDenominator = denominator;
   updateClickPatternOptions();
-  timeSignatureInput.value = `${numerator}/${denominator}`;
-  timeSignatureStatus.textContent = `${numerator} beats per measure`;
+  timeSignatureStatus.textContent = `${numerator}/${denominator}`;
   if (!isStopped) startVisualMetronome();
-});
+}
+beatsPerBarInput.addEventListener("change", applyTimeSignature);
+noteValueInput.addEventListener("change", applyTimeSignature);
 function applyTempoRange() {
   const minimum = Number(minBpmInput.value);
   const maximum = Number(maxBpmInput.value);

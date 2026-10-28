@@ -10,10 +10,9 @@
     <main>
       <div class="top-session-control">
         <div class="session-buttons">
-          <button id="sound-toggle" class="sound-toggle on" type="button">Sound off</button>
           <div class="volume-control">
-            <label for="metronome-volume">Volume</label>
-            <input id="metronome-volume" type="range" min="0" max="100" step="1" value="75" aria-valuetext="75%" />
+            <button id="volume-toggle" class="volume-toggle" type="button" aria-label="Mute metronome" aria-pressed="false" title="Mute metronome">Volume</button>
+            <input id="metronome-volume" type="range" min="0" max="100" step="1" value="75" aria-label="Metronome volume" aria-valuetext="75%" />
             <output id="metronome-volume-value" for="metronome-volume">75%</output>
           </div>
           <label class="accent-control"><input id="accent-toggle" type="checkbox" checked /> Accent first beat</label>
@@ -24,6 +23,7 @@
         <div class="session-timers">
           <p id="pdf-countdown" class="pdf-countdown top-countdown">Section not started</p>
           <p id="total-session-countdown" class="pdf-countdown top-countdown">Total time: no limit</p>
+          <p id="round-position" class="pdf-countdown top-countdown" aria-live="polite"></p>
         </div>
       </div>
       <section class="viewer-card" aria-live="polite">
@@ -140,12 +140,18 @@
           <span>seconds</span>
           <span id="duration-status" aria-live="polite"></span>
         </div>
-        <form id="time-signature-form" class="time-signature-form">
-          <label for="time-signature-input">Time signature</label>
-          <input id="time-signature-input" type="text" value="4/4" pattern="[0-9]+/[0-9]+" inputmode="text" required />
-          <button type="submit">Set</button>
-          <span id="time-signature-status">4 beats per measure</span>
-        </form>
+        <div class="time-signature-form">
+          <label for="beats-per-bar-input">Time signature</label>
+          <input id="beats-per-bar-input" type="number" min="1" max="32" step="1" value="4" inputmode="numeric" aria-label="Beats per bar" required />
+          <select id="note-value-input" aria-label="Note value">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="4" selected>4</option>
+            <option value="8">8</option>
+            <option value="16">16</option>
+          </select>
+          <span id="time-signature-status" aria-live="polite">4/4</span>
+        </div>
         <div class="click-pattern-control">
           <label for="click-pattern-input">Metronome clicks</label>
           <select id="click-pattern-input">

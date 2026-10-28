@@ -24,15 +24,15 @@ Choose **Saved Sections** to practice from the start of the PDF to the end, or *
 
 Use **Total session time** to set the length of the whole round in minutes. The app divides that time across every PDF, distributing any extra seconds so the total is exact, and displays a session countdown timer. In **One section** mode, it instead sets the total practice duration while tempo and dynamics refresh at the selected interval. Both timing fields apply when you finish editing and leave the field. Outside **One section** mode, editing **Display each PDF for** clears total session time and returns to manual timing. Clearing **Total session time** removes the optional total timer. With the Build up tempo method, every calculated PDF duration must be at least 60 seconds.
 
-Press **Sound on** once to start the metronome. Press **Sound off** to silence the clicks while keeping the visual beat indicator running. Browsers require this one interaction before allowing audio playback.
+Press **Volume** beside the slider to mute the metronome while keeping the visual beat indicator running. The button changes to **Muted**; press it again to restore sound at the selected volume. Starting a session enables audio unless muted. Browsers require an interaction before allowing audio playback.
 
-Use the **Volume** slider beside the sound button to adjust metronome loudness from 0% (silent) to 100% (full volume), starting at 75%. The slider uses a logarithmic audio scale: nonzero positions span approximately −40 dB to 0 dB, with 50% at −20 dB and 75% at −10 dB. At full volume, peak amplitude is 0.80 for regular beats and 1.00 for accented beats. Changes apply immediately. The setting lasts for the current page session, including when sound is turned off and back on.
+Use the **Volume** slider beside the mute button to adjust metronome loudness from 0% (silent) to 100% (full volume), starting at 75%. The slider uses a logarithmic audio scale: nonzero positions span approximately −40 dB to 0 dB, with 50% at −20 dB and 75% at −10 dB. At full volume, peak amplitude is 0.80 for regular beats and 1.00 for accented beats. Changes apply immediately. The setting lasts for the current page session, including when sound is turned off and back on.
 
 Use **Stop session** to pause PDF rotation while the metronome continues at its current tempo. Press **Resume session** to continue the displayed PDF with its remaining time and Build up progression.
 
 Choose the folder and practice settings on the setup screen first. Starting the session switches to a focused PDF practice screen; use **End session** to return to setup.
 
-Set **Time signature** in `x/y` format (for example, `3/4` or `6/8`). The first beat of each measure is played with a louder, higher click by default. Uncheck **Accent first beat** beside the sound button to give every beat the same normal click. Changes apply on the next beat without resetting the tempo or measure position. This choice stays in effect until you reload the page, including when you mute the sound or start another session.
+Set **Time signature** in `x/y` format (for example, `3/4` or `6/8`). The first beat of each measure is played with a louder, higher click by default. Uncheck **Accent first beat** beside the mute button to give every beat the same normal click. Changes apply on the next beat without resetting the tempo or measure position. This choice stays in effect until you reload the page, including when you mute the sound or start another session.
 
 Use **BPM range** to set inclusive lower and upper limits (1–300) for the Random BPM and Build up methods.
 

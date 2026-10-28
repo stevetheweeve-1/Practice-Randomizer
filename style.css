@@ -13,8 +13,8 @@ h1 { font-size: clamp(2.8rem, 7vw, 5.8rem); line-height: .94; margin: 0; }
 .metronome-controls { margin-top: 14px; }
 .beat-light { width: 9px; height: 9px; border-radius: 50%; background: #9ba89a; }
 .beat-light.beat { animation: beat .22s ease-out; }
-.sound-toggle { padding: 8px 12px; background: #66745d; font-size: .63rem; }
-.sound-toggle.on { background: #284c3a; }
+.volume-toggle { padding: 8px 12px; background: #284c3a; font-size: .63rem; }
+.volume-toggle[aria-pressed="true"] { background: #66745d; }
 .volume-control { display: inline-flex; align-items: center; gap: 6px; color: #536055; font-size: .63rem; }
 .volume-control input { width: 100px; margin: 0; accent-color: #284c3a; }
 .volume-control output { min-width: 4ch; text-align: right; }
@@ -32,8 +32,7 @@ h1 { font-size: clamp(2.8rem, 7vw, 5.8rem); line-height: .94; margin: 0; }
 .folder-picker { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 14px; color: #536055; font-size: .69rem; }
 .folder-picker button { padding: 8px 12px; border-radius: 6px; background: #66745d; font-size: .63rem; }
 .time-signature-form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
-.time-signature-form input { width: 58px; border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; padding: 7px; }
-.time-signature-form button { padding: 8px 12px; border-radius: 6px; background: #66745d; font-size: .63rem; }
+.time-signature-form input, .time-signature-form select { width: 58px; border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; padding: 7px; }
 .tempo-range-form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
 .tempo-range-form input { width: 52px; border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; padding: 7px; }
 .target-tempo-form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
@@ -67,6 +66,7 @@ canvas { display: block; max-width: 100%; height: auto; box-shadow: 0 5px 20px #
 .empty-state p { color: #536055; line-height: 1.6; margin: 0 auto; max-width: 380px; }
 code { padding: 2px 5px; background: #e3e7d8; }
 .count { color: #657067; font-size: .7rem; letter-spacing: .04em; margin: 23px 4px; }
+.count:empty { display: none; }
 @media (max-width: 600px) { .viewer-heading { align-items: flex-start; flex-direction: column; } .viewer-actions { width: 100%; justify-content: space-between; } .pdf-viewer { min-height: 56vh; padding: 15px; } }
 
 /* Setup is a deliberate first step; the practice view is shown only after Start session. */
@@ -130,3 +130,5 @@ body[data-view="practice"] .setup-heading { display: none; }
 
 .click-pattern-control { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
 .click-pattern-control select { border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; padding: 7px; }
+
+.time-signature-form input, .time-signature-form select { box-sizing: border-box; width: 40px; padding: 7px 4px; }
