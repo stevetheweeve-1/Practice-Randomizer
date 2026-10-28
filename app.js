@@ -30,7 +30,7 @@ const endSessionButton = document.querySelector("#end-session-button");
 const startSessionButton = document.querySelector("#start-session-button");
 const pdfCountdown = document.querySelector("#pdf-countdown");
 const totalSessionCountdown = document.querySelector("#total-session-countdown");
-const durationForm = document.querySelector("#duration-form");
+const durationStatus = document.querySelector("#duration-status");
 const durationInput = document.querySelector("#duration-input");
 const durationLabel = document.querySelector("#duration-label");
 const totalSessionForm = document.querySelector("#total-session-form");
@@ -49,14 +49,11 @@ const twoClicksOption = document.querySelector("#two-clicks-option");
 const timeSignatureForm = document.querySelector("#time-signature-form");
 const timeSignatureInput = document.querySelector("#time-signature-input");
 const timeSignatureStatus = document.querySelector("#time-signature-status");
-const tempoRangeForm = document.querySelector("#tempo-range-form");
 const minBpmInput = document.querySelector("#min-bpm-input");
 const maxBpmInput = document.querySelector("#max-bpm-input");
 const tempoRangeStatus = document.querySelector("#tempo-range-status");
-const targetTempoForm = document.querySelector("#target-tempo-form");
 const targetTempoInput = document.querySelector("#target-tempo-input");
 const targetTempoStatus = document.querySelector("#target-tempo-status");
-const tempoMethodForm = document.querySelector("#tempo-method-form");
 const tempoMethodInput = document.querySelector("#tempo-method-input");
 const tempoMethodStatus = document.querySelector("#tempo-method-status");
 const tempoAnchorControl = document.querySelector("#tempo-anchor-control");
@@ -1115,21 +1112,22 @@ stopButton.addEventListener("click", async () => {
   startCountdown();
 });
 endSessionButton.addEventListener("click", finishSession);
-durationForm.addEventListener("submit", (event) => {
-  event.preventDefault();
+durationInput.addEventListener("change", () => {
   const requestedDuration = Number(durationInput.value);
   if (!Number.isInteger(requestedDuration) || requestedDuration < 1 || requestedDuration > 3600) {
-    durationInput.focus();
+    durationStatus.textContent = "Use a whole number from 1–3,600 seconds";
     return;
   }
   if (requestedDuration < 60 && methodMayBuildUp()) {
     showBuildUpDurationError();
-    durationInput.focus();
+    durationStatus.textContent = "Build up requires at least 60 seconds per PDF";
     return;
   }
   displayDurationSeconds = requestedDuration;
+  durationStatus.textContent = `${requestedDuration}s per interval`;
   if (practiceMode !== "single-section") {
     totalSessionSeconds = null;
+    totalSessionInput.value = "";
     sessionDurationPlan = [];
     totalSessionStatus.textContent = "Using manual duration";
   } else {
@@ -1139,16 +1137,21 @@ durationForm.addEventListener("submit", (event) => {
   }
   startCountdown();
 });
-totalSessionForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
+totalSessionInput.addEventListener("change", async () => {
   if (sessionStarted) {
     totalSessionStatus.textContent = "End the current session before changing its total time";
+    return;
+  }
+  if (!totalSessionInput.value.trim()) {
+    totalSessionSeconds = null;
+    sessionDurationPlan = [];
+    durationInput.value = displayDurationSeconds;
+    totalSessionStatus.textContent = practiceMode === "single-section" ? "Optional second timer" : "Using manual duration";
     return;
   }
   const requestedMinutes = Number(totalSessionInput.value);
   if (!Number.isFinite(requestedMinutes) || requestedMinutes < 1 || requestedMinutes > 1440) {
     totalSessionStatus.textContent = "Use 1–1,440 minutes";
-    totalSessionInput.focus();
     return;
   }
   totalSessionSeconds = Math.round(requestedMinutes * 60);
@@ -1262,32 +1265,29 @@ timeSignatureForm.addEventListener("submit", (event) => {
   timeSignatureStatus.textContent = `${numerator} beats per measure`;
   if (!isStopped) startVisualMetronome();
 });
-tempoRangeForm.addEventListener("submit", (event) => {
-  event.preventDefault();
+function applyTempoRange() {
   const minimum = Number(minBpmInput.value);
   const maximum = Number(maxBpmInput.value);
   if (!Number.isInteger(minimum) || !Number.isInteger(maximum) || minimum < 1 || maximum > 300 || minimum > maximum) {
     tempoRangeStatus.textContent = "Use whole numbers from 1–300, low to high";
-    minBpmInput.focus();
     return;
   }
   minimumBpm = minimum;
   maximumBpm = maximum;
   tempoRangeStatus.textContent = `${minimum}–${maximum} BPM, inclusive`;
-});
-targetTempoForm.addEventListener("submit", (event) => {
-  event.preventDefault();
+}
+minBpmInput.addEventListener("change", applyTempoRange);
+maxBpmInput.addEventListener("change", applyTempoRange);
+targetTempoInput.addEventListener("change", () => {
   const requestedTarget = Number(targetTempoInput.value);
   if (!Number.isInteger(requestedTarget) || requestedTarget < 1 || requestedTarget > 300) {
     targetTempoStatus.textContent = "Use a whole number from 1–300";
-    targetTempoInput.focus();
     return;
   }
   targetTempo = requestedTarget;
   targetTempoStatus.textContent = `Target: ${targetTempo} BPM`;
 });
-tempoMethodForm.addEventListener("submit", (event) => {
-  event.preventDefault();
+tempoMethodInput.addEventListener("change", () => {
   if (!isTempoMethod(tempoMethodInput.value)) return;
   tempoMethod = tempoMethodInput.value;
   updateTempoAnchorUi();
