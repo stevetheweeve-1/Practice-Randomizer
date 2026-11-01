@@ -45,7 +45,7 @@ const practiceModeStatus = document.querySelector("#practice-mode-status");
 const singlePdfPicker = document.querySelector("#single-pdf-picker");
 const singlePdfInput = document.querySelector("#single-pdf-input");
 const singlePdfStatus = document.querySelector("#single-pdf-status");
-const clickPatternInput = document.querySelector("#click-pattern-input");
+const clickPatternInputs = document.querySelectorAll('input[name="click-pattern"]');
 const twoClicksOption = document.querySelector("#two-clicks-option");
 const beatsPerBarInput = document.querySelector("#beats-per-bar-input");
 const noteValueInput = document.querySelector("#note-value-input");
@@ -179,6 +179,27 @@ function populateSinglePdfPicker() {
   singlePdfStatus.textContent = selectedSinglePdf ? "Selected: " + selectedSinglePdf.name : "Create or import saved sections first";
 }
 
+let singleBuildUpTiming = false;
+let previousDisplayDurationSeconds = displayDurationSeconds;
+
+function updateDurationControl() {
+  const isSingleBuildUp = practiceMode === "single-section" && tempoMethod === "build-up";
+  if (isSingleBuildUp !== singleBuildUpTiming) {
+    if (isSingleBuildUp) {
+      previousDisplayDurationSeconds = displayDurationSeconds;
+      displayDurationSeconds = 30;
+    } else {
+      displayDurationSeconds = previousDisplayDurationSeconds;
+    }
+    durationInput.value = displayDurationSeconds;
+    durationStatus.textContent = "";
+    singleBuildUpTiming = isSingleBuildUp;
+  }
+  durationLabel.textContent = isSingleBuildUp
+    ? "Increase metronome speed every"
+    : practiceMode === "single-section" ? "Refresh tempo and dynamics every" : "Display each PDF for";
+}
+
 function updatePracticeModeUi() {
   const isSingle = practiceMode === "single-section";
   singlePdfPicker.hidden = !isSingle;
@@ -188,7 +209,7 @@ function updatePracticeModeUi() {
   singlePdfPicker.style.display = isSingle ? "flex" : "none";
   const isSavedSections = isSavedSectionsMode();
   totalSessionForm.hidden = false;
-  durationLabel.textContent = isSingle ? "Refresh tempo and dynamics every" : "Display each PDF for";
+  updateDurationControl();
   button.firstChild.textContent = isSingle ? "Refresh now " : "Next now ";
   if (isSavedSections) {
     sessionDurationPlan = [];
@@ -269,7 +290,9 @@ function updateTempoAnchorUi() {
 }
 
 function showBuildUpDurationError() {
-  tempoMethodStatus.textContent = "Build up requires at least 60 seconds per PDF";
+  tempoMethodStatus.textContent = practiceMode === "single-section"
+    ? "Build up requires a total session time of at least 1 minute"
+    : "Build up requires at least 60 seconds per PDF";
 }
 
 function calculateSessionDurations(pdfCount) {
@@ -353,8 +376,12 @@ function resumeTotalSessionClock() {
   if (hasTotalSessionLimit()) totalSessionActiveSince = Date.now();
 }
 
+function getTotalSessionElapsedMs() {
+  return totalSessionElapsedMs + (totalSessionActiveSince === null ? 0 : Date.now() - totalSessionActiveSince);
+}
+
 function getTotalSessionRemainingMs() {
-  return Math.max(0, (totalSessionSeconds * 1000) - (totalSessionElapsedMs + (totalSessionActiveSince === null ? 0 : Date.now() - totalSessionActiveSince)));
+  return Math.max(0, (totalSessionSeconds * 1000) - getTotalSessionElapsedMs());
 }
 
 function clearTotalSessionTimers() {
@@ -383,12 +410,15 @@ function startTotalSessionCountdown() {
 
 function startBuildUp() {
   clearTimeout(rampTimer);
+  const usesSessionClock = practiceMode === "single-section";
+  const durationSeconds = usesSessionClock ? totalSessionSeconds : currentDisplayDurationSeconds;
+  const getElapsedMs = usesSessionClock ? getTotalSessionElapsedMs : getSectionElapsedMs;
   if (activeUseAnchorTempos) {
     const tempos = [minimumBpm, targetTempo, maximumBpm];
-    const stageDurationMs = (currentDisplayDurationSeconds * 1000) / tempos.length;
+    const stageDurationMs = (durationSeconds * 1000) / tempos.length;
     const scheduleAnchorTempo = () => {
       if (!sessionStarted || isStopped || activeTempoMethod !== "build-up") return;
-      const elapsedMs = getSectionElapsedMs();
+      const elapsedMs = getElapsedMs();
       const stageIndex = Math.min(tempos.length - 1, Math.floor(elapsedMs / stageDurationMs));
       setCurrentTempo(tempos[stageIndex], getTempoMethodDescription("build-up", true));
       if (stageIndex >= tempos.length - 1) return;
@@ -398,17 +428,18 @@ function startBuildUp() {
     scheduleAnchorTempo();
     return;
   }
-  const transitions = Math.ceil(currentDisplayDurationSeconds / 30) - 1;
+  const stepMs = usesSessionClock ? displayDurationSeconds * 1000 : 30000;
+  const transitions = Math.ceil(durationSeconds * 1000 / stepMs) - 1;
 
   const scheduleTempo = () => {
     if (!sessionStarted || isStopped || activeTempoMethod !== "build-up") return;
-    const elapsedMs = getSectionElapsedMs();
-    const stepIndex = Math.min(transitions, Math.floor(elapsedMs / 30000));
+    const elapsedMs = getElapsedMs();
+    const stepIndex = Math.min(transitions, Math.floor(elapsedMs / stepMs));
     const progress = transitions > 0 ? stepIndex / transitions : 0;
     const nextTempo = Number((minimumBpm + ((maximumBpm - minimumBpm) * progress)).toFixed(1));
     setCurrentTempo(nextTempo, tempoMethodLabels["build-up"]);
     if (stepIndex >= transitions) return;
-    const nextStepAtMs = (stepIndex + 1) * 30000;
+    const nextStepAtMs = (stepIndex + 1) * stepMs;
     rampTimer = setTimeout(scheduleTempo, Math.max(1, nextStepAtMs - elapsedMs));
   };
 
@@ -481,11 +512,10 @@ function applyPracticeSettings(settings, source = "the defaults") {
 
 function updateClickPatternOptions() {
   const supportsTwo = beatsPerMeasure % 4 === 0;
-  twoClicksOption.hidden = !supportsTwo;
   twoClicksOption.disabled = !supportsTwo;
   if (!supportsTwo && clickPattern === "two") {
     clickPattern = "beat";
-    clickPatternInput.value = clickPattern;
+    clickPatternInputs.forEach((input) => { input.checked = input.value === clickPattern; });
   }
 }
 
@@ -697,6 +727,21 @@ async function startNewRound() {
   }
 }
 
+function getCurrentTempoRemainingMs() {
+  if (practiceMode !== "single-section") return getSectionRemainingMs();
+  if (activeTempoMethod === "build-up") {
+    const durationMs = totalSessionSeconds * 1000;
+    const elapsedMs = getTotalSessionElapsedMs();
+    const stageMs = activeUseAnchorTempos ? durationMs / 3 : displayDurationSeconds * 1000;
+    const nextChangeMs = (Math.floor(elapsedMs / stageMs) + 1) * stageMs;
+    return Math.max(0, Math.min(durationMs, nextChangeMs) - elapsedMs);
+  }
+  if (activeTempoMethod === "target" || activeTempoMethod === "half-target") {
+    return hasTotalSessionLimit() ? getTotalSessionRemainingMs() : null;
+  }
+  return getSectionRemainingMs();
+}
+
 function startCountdown() {
   if (isStopped) return;
   clearTimeout(rotationTimer);
@@ -704,9 +749,14 @@ function startCountdown() {
   const remainingMs = getSectionRemainingMs();
   const endsAt = Date.now() + remainingMs;
   const updateCountdown = () => {
-    const secondsLeft = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+    const tempoRemainingMs = practiceMode === "single-section"
+      ? getCurrentTempoRemainingMs()
+      : Math.max(0, endsAt - Date.now());
+    const secondsLeft = Math.ceil(tempoRemainingMs / 1000);
     rotationStatus.textContent = "";
-    pdfCountdown.textContent = "Section: " + secondsLeft + "s left";
+    pdfCountdown.textContent = tempoRemainingMs === null
+      ? "Section: current tempo · no time limit"
+      : "Section: " + secondsLeft + (practiceMode === "single-section" ? "s at current tempo" : "s left");
   };
   updateCountdown();
   countdownTimer = setInterval(updateCountdown, 250);
@@ -715,7 +765,8 @@ function startCountdown() {
 
 function refreshSinglePdfPractice() {
   resetSectionClock();
-  applyTempoForNewPdf();
+  // The session-wide Build up continues independently of refresh intervals.
+  if (activeTempoMethod !== "build-up") applyTempoForNewPdf();
   startDynamicsPractice();
   startCountdown();
 }
@@ -1045,7 +1096,9 @@ startSessionButton.addEventListener("click", async () => {
     targetTempoInput.focus();
     return;
   }
-  if ((practiceMode === "single-section" || totalSessionSeconds === null) && methodMayBuildUp() && displayDurationSeconds < 60) {
+  if (methodMayBuildUp() && (practiceMode === "single-section"
+    ? totalSessionSeconds === null || totalSessionSeconds < 60
+    : totalSessionSeconds === null && displayDurationSeconds < 60)) {
     showBuildUpDurationError();
     return;
   }
@@ -1124,7 +1177,7 @@ durationInput.addEventListener("change", () => {
     durationStatus.textContent = "Use a whole number from 1–3,600 seconds";
     return;
   }
-  if (requestedDuration < 60 && methodMayBuildUp()) {
+  if (practiceMode !== "single-section" && requestedDuration < 60 && methodMayBuildUp()) {
     showBuildUpDurationError();
     durationStatus.textContent = "Build up requires at least 60 seconds per PDF";
     return;
@@ -1248,10 +1301,13 @@ folderInput.addEventListener("change", async () => {
   clearInterval(countdownTimer);
   showNextPdf();
 });
-clickPatternInput.addEventListener("change", () => {
-  clickPattern = clickPatternInput.value;
-  updateClickPatternOptions();
-  if (sessionStarted) startVisualMetronome();
+clickPatternInputs.forEach((input) => {
+  input.addEventListener("change", () => {
+    if (!input.checked) return;
+    clickPattern = input.value;
+    updateClickPatternOptions();
+    if (sessionStarted) startVisualMetronome();
+  });
 });
 function applyTimeSignature() {
   const numerator = Number(beatsPerBarInput.value);
@@ -1294,8 +1350,11 @@ targetTempoInput.addEventListener("change", () => {
 tempoMethodInput.addEventListener("change", () => {
   if (!isTempoMethod(tempoMethodInput.value)) return;
   tempoMethod = tempoMethodInput.value;
+  updateDurationControl();
   updateTempoAnchorUi();
-  if (methodMayBuildUp() && displayDurationSeconds < 60) {
+  if (methodMayBuildUp() && (practiceMode === "single-section"
+    ? totalSessionSeconds === null || totalSessionSeconds < 60
+    : totalSessionSeconds === null && displayDurationSeconds < 60)) {
     showBuildUpDurationError();
     return;
   }
