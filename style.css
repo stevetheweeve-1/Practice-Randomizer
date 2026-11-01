@@ -128,7 +128,11 @@ body[data-view="practice"] .setup-heading { display: none; }
 .handle-ne, .handle-sw { cursor: nesw-resize; }
 .handle-nw, .handle-se { cursor: nwse-resize; }
 
-.click-pattern-control { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
-.click-pattern-control select { border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; padding: 7px; }
 
 .time-signature-form input, .time-signature-form select { box-sizing: border-box; width: 40px; padding: 7px 4px; }
+
+.click-pattern-control { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin: 0; padding: 6px 10px; border: 1px solid #9da891; border-radius: 6px; color: #536055; font-size: .63rem; }
+.click-pattern-control legend { padding: 0 4px; }
+.click-pattern-control label { display: inline-flex; align-items: center; gap: 4px; }
+.click-pattern-control input { margin: 0; accent-color: #284c3a; }
+.click-pattern-control label:has(input:disabled) { opacity: .5; }

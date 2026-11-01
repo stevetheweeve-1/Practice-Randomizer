@@ -16,6 +16,12 @@
             <output id="metronome-volume-value" for="metronome-volume">75%</output>
           </div>
           <label class="accent-control"><input id="accent-toggle" type="checkbox" checked /> Accent first beat</label>
+          <fieldset class="click-pattern-control">
+            <legend>Metronome clicks</legend>
+            <label><input type="radio" name="click-pattern" value="beat" checked /> Every beat</label>
+            <label><input type="radio" name="click-pattern" value="bar" /> One click per bar</label>
+            <label><input id="two-clicks-option" type="radio" name="click-pattern" value="two" /> Two clicks per bar</label>
+          </fieldset>
           <button id="start-session-button" class="start-session-button" type="button">Start session</button>
           <button id="stop-button" class="stop-button" type="button" disabled>Stop session</button>
           <button id="end-session-button" class="end-session-button" type="button" hidden>End session</button>
@@ -151,15 +157,6 @@
             <option value="16">16</option>
           </select>
           <span id="time-signature-status" aria-live="polite">4/4</span>
-        </div>
-        <div class="click-pattern-control">
-          <label for="click-pattern-input">Metronome clicks</label>
-          <select id="click-pattern-input">
-            <option value="beat">Every beat</option>
-            <option id="two-clicks-option" value="two">Two clicks per bar</option>
-            <option value="bar">One click per bar</option>
-          </select>
-          <span>Tempo is quarter-note BPM</span>
         </div>
         <div class="tempo-range-form">
           <label for="min-bpm-input">BPM range</label>
