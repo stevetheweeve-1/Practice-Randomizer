@@ -93,7 +93,7 @@ let sessionDurationPlan = [];
 let audioContext;
 let metronomeGain;
 let metronomeVolume = volumeToGain(Number(metronomeVolumeInput.value));
-let visualMetronomeTimer;
+let visualMetronomeTimer = null;
 let currentBpm = 60;
 let selectedFolderPdfs = [];
 let selectedSinglePdf = null;
@@ -712,6 +712,7 @@ async function finishSession() {
   clearTotalSessionTimers();
   stopDynamicsPractice();
   clearInterval(visualMetronomeTimer);
+  visualMetronomeTimer = null;
   await audioContext?.suspend();
   playlist = [];
   playlistIndex = 0;
@@ -1374,7 +1375,7 @@ clickPatternInputs.forEach((input) => {
     if (!input.checked) return;
     clickPattern = input.value;
     updateClickPatternOptions();
-    if (sessionStarted) startVisualMetronome();
+    if (visualMetronomeTimer !== null) startVisualMetronome();
   });
 });
 function applyTimeSignature() {
