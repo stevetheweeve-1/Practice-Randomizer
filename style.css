@@ -138,3 +138,13 @@ body[data-view="practice"] .setup-heading { display: none; }
 .click-pattern-control label { display: inline-flex; align-items: center; gap: 4px; }
 .click-pattern-control input { margin: 0; accent-color: #284c3a; }
 .click-pattern-control label:has(input:disabled) { opacity: .5; }
+
+.selected-sections-picker { margin-top: 14px; color: #536055; font-size: .75rem; }
+.selected-sections-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.selected-sections-actions button { padding: 8px 12px; font-size: .69rem; }
+#selected-sections-list { max-height: 300px; overflow-y: auto; margin-top: 10px; }
+#selected-sections-list fieldset { border: 1px solid #9da891; border-radius: 6px; margin: 8px 0; }
+#selected-sections-list label { display: flex; align-items: center; gap: 8px; padding: 5px; }
+#selected-sections-list input { accent-color: #284c3a; }
+
+#selected-sections-order { padding: 7px; border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; }

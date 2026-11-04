@@ -86,6 +86,7 @@
             <option value="whole-piece">Full score</option>
             <option value="saved-sections" selected>Saved sections (random)</option>
             <option value="saved-sections-ordered">Saved Sections</option>
+            <option value="saved-sections-selected">Saved Sections (selected)</option>
             <option value="saved-sections-reverse">Saved Sections (reverse)</option>
             <option value="single-section">One section</option>
           </select>
@@ -96,6 +97,20 @@
           <select id="single-pdf-input" disabled></select>
           <span id="single-pdf-status">Choose a folder first</span>
         </div>
+        <section id="selected-sections-picker" class="selected-sections-picker" aria-label="Sections to practice" hidden>
+          <div class="selected-sections-actions">
+            <label for="selected-sections-order">Order</label>
+            <select id="selected-sections-order">
+              <option value="random">Random</option>
+              <option value="score" selected>Score</option>
+              <option value="reverse">Reverse</option>
+            </select>
+            <button id="select-all-sections" type="button">Select all</button>
+            <button id="clear-selected-sections" type="button">Clear all</button>
+            <span id="selected-sections-count" aria-live="polite"></span>
+          </div>
+          <div id="selected-sections-list"></div>
+        </section>
         <section id="section-editor" class="section-editor" hidden>
           <div class="section-editor-heading">
             <div>
