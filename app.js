@@ -65,6 +65,7 @@ const closeSectionEditorButton = document.querySelector("#close-section-editor")
 const sectionSourceInput = document.querySelector("#section-source-input");
 const editSectionInput = document.querySelector("#edit-section-input");
 const cancelSectionButton = document.querySelector("#cancel-section-button");
+const deleteSectionButton = document.querySelector("#delete-section-button");
 const sectionNameInput = document.querySelector("#section-name-input");
 const addFragmentButton = document.querySelector("#add-fragment-button");
 const sectionEditorCanvas = document.querySelector("#section-editor-canvas");
@@ -837,6 +838,7 @@ async function selectEditorSection(section) {
   addFragmentButton.classList.toggle("active", editorIsDrawing);
   addFragmentButton.textContent = editorIsDrawing ? "Drawing: drag on the page" : "Add fragment";
   saveSectionButton.textContent = section ? "Save changes" : "Save section";
+  deleteSectionButton.disabled = !section;
   editorBaseline = editorSnapshot();
   refreshEditableSections();
   renderDraftFragments();
@@ -1383,6 +1385,22 @@ cancelSectionButton.addEventListener("click", async () => {
   await selectEditorSection(editingSection);
   sectionEditorStatus.textContent = "Changes cancelled.";
 });
+deleteSectionButton.addEventListener("click", async () => {
+  const section = editingSection;
+  const index = savedSections.indexOf(section);
+  if (index === -1) return;
+  const unsavedWarning = editorSnapshot() !== editorBaseline
+    ? " Unsaved changes to this section will also be discarded."
+    : "";
+  if (!window.confirm('Delete "' + section.name + '"?' + unsavedWarning)) return;
+  savedSections.splice(index, 1);
+  populateSinglePdfPicker();
+  playlist = [];
+  playlistIndex = 0;
+  await selectEditorSection(null);
+  updatePracticeModeUi();
+  sectionEditorStatus.textContent = section.name + " deleted for this session. Download score-sections.json to keep changes.";
+});
 sectionSourceInput.addEventListener("change", async () => {
   if (!confirmDiscardSection()) {
     sectionSourceInput.value = String(selectedFolderPdfs.indexOf(editorSourceItem));
@@ -1488,10 +1506,6 @@ saveSectionButton.addEventListener("click", async () => {
 });
 exportSectionsButton.addEventListener("click", () => {
   if (!confirmDiscardSectionForExport()) return;
-  if (!savedSections.length) {
-    sectionEditorStatus.textContent = "Save at least one saved section first.";
-    return;
-  }
   const data = { version: 1, sections: savedSections.map((section) => ({ name: section.name, source: section.sourcePath, fragments: section.fragments })) };
   const download = document.createElement("a");
   download.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2) + "\n"], { type: "application/json" }));

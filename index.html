@@ -15,7 +15,7 @@
             <input id="metronome-volume" type="range" min="0" max="100" step="1" value="75" aria-label="Metronome volume" aria-valuetext="75%" />
             <output id="metronome-volume-value" for="metronome-volume">75%</output>
           </div>
-          <label class="accent-control"><input id="accent-toggle" type="checkbox" checked /> Accent first beat</label>
+          <label class="accent-control"><input id="accent-toggle" type="checkbox" /> Accent first beat</label>
           <fieldset class="click-pattern-control">
             <legend>Metronome clicks</legend>
             <label><input type="radio" name="click-pattern" value="beat" checked /> Every beat</label>
@@ -108,6 +108,7 @@
           <div class="section-editor-actions">
             <button id="save-section-button" type="button">Save section</button>
             <button id="cancel-section-button" type="button">Cancel changes</button>
+            <button id="delete-section-button" type="button" disabled>Delete section</button>
             <button id="export-sections-button" type="button">Download score-sections.json</button>
           </div>
           <div class="section-editor-controls">

@@ -97,6 +97,8 @@ body[data-view="practice"] .setup-heading { display: none; }
 .section-editor-heading button, .section-editor-actions button, .section-editor-controls button, .section-editor-page-controls button, .section-fragment-list button, .open-section-editor { padding: 8px 12px; border-radius: 6px; background: #66745d; font-size: .63rem; }
 .section-editor-help, .section-editor-status { color: #536055; font-size: .72rem; line-height: 1.55; }
 .section-editor-controls, .section-editor-actions, .section-editor-page-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
+#delete-section-button { background: #98483f; }
+#delete-section-button:disabled { cursor: default; opacity: .5; }
 .section-editor-controls select, .section-editor-controls input { max-width: min(280px, 100%); border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; padding: 7px; }
 .section-editor-controls .active { background: #8d4b3d; }
 .section-editor-canvas-wrap { position: relative; width: fit-content; max-width: 100%; margin: 18px auto 0; box-shadow: 0 5px 20px #25302655; }
