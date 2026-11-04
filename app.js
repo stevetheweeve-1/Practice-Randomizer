@@ -65,6 +65,7 @@ const closeSectionEditorButton = document.querySelector("#close-section-editor")
 const sectionSourceInput = document.querySelector("#section-source-input");
 const editSectionInput = document.querySelector("#edit-section-input");
 const cancelSectionButton = document.querySelector("#cancel-section-button");
+const deleteSectionButton = document.querySelector("#delete-section-button");
 const sectionNameInput = document.querySelector("#section-name-input");
 const addFragmentButton = document.querySelector("#add-fragment-button");
 const sectionEditorCanvas = document.querySelector("#section-editor-canvas");
@@ -92,7 +93,7 @@ let sessionDurationPlan = [];
 let audioContext;
 let metronomeGain;
 let metronomeVolume = volumeToGain(Number(metronomeVolumeInput.value));
-let visualMetronomeTimer;
+let visualMetronomeTimer = null;
 let currentBpm = 60;
 let selectedFolderPdfs = [];
 let selectedSinglePdf = null;
@@ -121,6 +122,11 @@ let totalSessionTimer;
 let totalSessionCountdownTimer;
 let dynamicsEnabled = false;
 let savedSections = [];
+let selectedSections = new Set();
+const selectedSectionsPicker = document.querySelector("#selected-sections-picker");
+const selectedSectionsList = document.querySelector("#selected-sections-list");
+const selectedSectionsOrder = document.querySelector("#selected-sections-order");
+const selectedSectionsCount = document.querySelector("#selected-sections-count");
 let editorPdf;
 let editorSourceItem = null;
 let editorPage = 1;
@@ -157,11 +163,12 @@ function showPracticeView() {
 }
 
 function isSavedSectionsMode() {
-  return ["saved-sections", "saved-sections-ordered", "saved-sections-reverse"].includes(practiceMode);
+  return ["saved-sections", "saved-sections-ordered", "saved-sections-reverse", "saved-sections-selected"].includes(practiceMode);
 }
 
 function getActivePdfs() {
   if (practiceMode === "single-section") return selectedSinglePdf ? [selectedSinglePdf] : [];
+  if (practiceMode === "saved-sections-selected") return savedSections.filter(section => selectedSections.has(section));
   if (isSavedSectionsMode()) return savedSections;
   return selectedFolderPdfs;
 }
@@ -201,6 +208,10 @@ function updateDurationControl() {
 }
 
 function updatePracticeModeUi() {
+  const isSelected = practiceMode === "saved-sections-selected";
+  selectedSectionsPicker.hidden = !isSelected;
+  if (isSelected) refreshSelectedSections();
+  if (!sessionStarted) startSessionButton.disabled = isSelected && !getActivePdfs().length;
   const isSingle = practiceMode === "single-section";
   singlePdfPicker.hidden = !isSingle;
   // The setup layout uses flex, so set an inline display value as well as the
@@ -217,6 +228,9 @@ function updatePracticeModeUi() {
     practiceModeStatus.textContent = savedSections.length
       ? savedSections.length + " saved section" + (savedSections.length === 1 ? "" : "s") + " ready"
       : "Create or import saved sections with the Section Editor";
+    if (isSelected) practiceModeStatus.textContent = getActivePdfs().length
+      ? getActivePdfs().length + " selected sections · " + selectedSectionsOrder.selectedOptions[0].textContent.toLowerCase() + " order"
+      : "Select at least one section";
   } else if (isSingle) {
     sessionDurationPlan = [];
     practiceModeStatus.textContent = "Repeat one saved section; tempo and dynamics refresh each interval";
@@ -229,6 +243,55 @@ function updatePracticeModeUi() {
       : "Choose a folder containing a full score PDF";
   }
 }
+
+function refreshSelectedSections() {
+  selectedSectionsList.replaceChildren();
+  let group;
+  let sourcePath;
+  getOrderedSections(savedSections).forEach(section => {
+    if (!group || sourcePath !== section.sourcePath) {
+      sourcePath = section.sourcePath;
+      group = document.createElement("fieldset");
+      const legend = document.createElement("legend");
+      legend.textContent = sourcePath;
+      group.append(legend);
+      selectedSectionsList.append(group);
+    }
+    const label = document.createElement("label");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = selectedSections.has(section);
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) selectedSections.add(section);
+      else selectedSections.delete(section);
+      selectionChanged();
+    });
+    label.append(checkbox, document.createTextNode(section.name));
+    group.append(label);
+  });
+  selectedSectionsCount.textContent = savedSections.filter(section => selectedSections.has(section)).length
+    + " of " + savedSections.length + " selected";
+}
+
+async function selectionChanged() {
+  playlist = [];
+  playlistIndex = 0;
+  sessionDurationPlan = [];
+  updatePracticeModeUi();
+  if (totalSessionSeconds !== null && getActivePdfs().length) await prepareSessionDurationPlan();
+  else if (totalSessionSeconds !== null) totalSessionStatus.textContent = "Select at least one section";
+}
+
+selectedSectionsOrder.addEventListener("change", selectionChanged);
+
+document.querySelector("#select-all-sections").addEventListener("click", () => {
+  selectedSections = new Set(savedSections);
+  selectionChanged();
+});
+document.querySelector("#clear-selected-sections").addEventListener("click", () => {
+  selectedSections.clear();
+  selectionChanged();
+});
 
 function stopDynamicsPractice() {
   dynamicsLabel.hidden = true;
@@ -308,7 +371,8 @@ async function prepareSessionDurationPlan() {
   }
   const pdfCount = getActivePdfs().length;
   if (!pdfCount) {
-    totalSessionStatus.textContent = "Choose a folder with PDFs first";
+    totalSessionStatus.textContent = practiceMode === "saved-sections-selected"
+      ? "Select at least one section" : "Choose a folder with PDFs first";
     return false;
   }
   sessionDurationPlan = calculateSessionDurations(pdfCount);
@@ -648,6 +712,7 @@ async function finishSession() {
   clearTotalSessionTimers();
   stopDynamicsPractice();
   clearInterval(visualMetronomeTimer);
+  visualMetronomeTimer = null;
   await audioContext?.suspend();
   playlist = [];
   playlistIndex = 0;
@@ -714,9 +779,11 @@ async function startNewRound() {
     playlistIndex = 0;
     return;
   }
-  if (practiceMode === "saved-sections-ordered" || practiceMode === "saved-sections-reverse") {
+  const selectedOrder = practiceMode === "saved-sections-selected" ? selectedSectionsOrder.value : null;
+  if (practiceMode === "saved-sections-ordered" || practiceMode === "saved-sections-reverse"
+    || selectedOrder === "score" || selectedOrder === "reverse") {
     playlist = getOrderedSections(activePdfs);
-    if (practiceMode === "saved-sections-reverse") playlist.reverse();
+    if (practiceMode === "saved-sections-reverse" || selectedOrder === "reverse") playlist.reverse();
   } else {
     playlist = shuffle(activePdfs);
   }
@@ -837,6 +904,7 @@ async function selectEditorSection(section) {
   addFragmentButton.classList.toggle("active", editorIsDrawing);
   addFragmentButton.textContent = editorIsDrawing ? "Drawing: drag on the page" : "Add fragment";
   saveSectionButton.textContent = section ? "Save changes" : "Save section";
+  deleteSectionButton.disabled = !section;
   editorBaseline = editorSnapshot();
   refreshEditableSections();
   renderDraftFragments();
@@ -1278,6 +1346,7 @@ folderInput.addEventListener("change", async () => {
       savedSections = [];
     }
   }
+  selectedSections = new Set(savedSections);
   populateSinglePdfPicker();
   refreshSectionSourceList();
   updatePracticeModeUi();
@@ -1306,7 +1375,7 @@ clickPatternInputs.forEach((input) => {
     if (!input.checked) return;
     clickPattern = input.value;
     updateClickPatternOptions();
-    if (sessionStarted) startVisualMetronome();
+    if (visualMetronomeTimer !== null) startVisualMetronome();
   });
 });
 function applyTimeSignature() {
@@ -1382,6 +1451,23 @@ editSectionInput.addEventListener("change", async () => {
 cancelSectionButton.addEventListener("click", async () => {
   await selectEditorSection(editingSection);
   sectionEditorStatus.textContent = "Changes cancelled.";
+});
+deleteSectionButton.addEventListener("click", async () => {
+  const section = editingSection;
+  const index = savedSections.indexOf(section);
+  if (index === -1) return;
+  const unsavedWarning = editorSnapshot() !== editorBaseline
+    ? " Unsaved changes to this section will also be discarded."
+    : "";
+  if (!window.confirm('Delete "' + section.name + '"?' + unsavedWarning)) return;
+  selectedSections.delete(section);
+  savedSections.splice(index, 1);
+  populateSinglePdfPicker();
+  playlist = [];
+  playlistIndex = 0;
+  await selectEditorSection(null);
+  updatePracticeModeUi();
+  sectionEditorStatus.textContent = section.name + " deleted for this session. Download score-sections.json to keep changes.";
 });
 sectionSourceInput.addEventListener("change", async () => {
   if (!confirmDiscardSection()) {
@@ -1477,8 +1563,10 @@ saveSectionButton.addEventListener("click", async () => {
     return;
   }
   const section = { type: "saved-section", name, sourcePath: getRelativePdfPath(editorSourceItem), sourceFile: editorSourceItem.file, fragments: draftFragments.map((fragment) => ({ ...fragment })) };
-  if (editingSection) savedSections[savedSections.indexOf(editingSection)] = section;
-  else savedSections.push(section);
+  if (editingSection) {
+    if (selectedSections.delete(editingSection)) selectedSections.add(section);
+    savedSections[savedSections.indexOf(editingSection)] = section;
+  } else savedSections.push(section);
   populateSinglePdfPicker();
   playlist = [];
   playlistIndex = 0;
@@ -1488,10 +1576,6 @@ saveSectionButton.addEventListener("click", async () => {
 });
 exportSectionsButton.addEventListener("click", () => {
   if (!confirmDiscardSectionForExport()) return;
-  if (!savedSections.length) {
-    sectionEditorStatus.textContent = "Save at least one saved section first.";
-    return;
-  }
   const data = { version: 1, sections: savedSections.map((section) => ({ name: section.name, source: section.sourcePath, fragments: section.fragments })) };
   const download = document.createElement("a");
   download.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2) + "\n"], { type: "application/json" }));
