@@ -148,3 +148,10 @@ body[data-view="practice"] .setup-heading { display: none; }
 #selected-sections-list input { accent-color: #284c3a; }
 
 #selected-sections-order { padding: 7px; border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; }
+
+.live-tempo-control { position: relative; display: grid; grid-template-columns: auto 70px auto; align-items: center; gap: 6px; flex-shrink: 0; font-size: .75rem; }
+.live-tempo-control[hidden] { display: none; }
+.live-tempo-control button { padding: 6px 10px; font-size: .7rem; }
+#live-tempo-input { width: 70px; padding: 6px; border: 1px solid #9da891; border-radius: 5px; font: inherit; }
+#resume-tempo-method[hidden] { display: inline-block; visibility: hidden; pointer-events: none; }
+#live-tempo-status { position: absolute; top: 100%; left: 0; margin-top: 4px; width: 100%; color: #536055; font-size: .65rem; }

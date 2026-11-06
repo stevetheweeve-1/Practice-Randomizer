@@ -43,6 +43,12 @@
               <span id="beat-light" class="beat-light" aria-hidden="true"></span>
               <span id="bpm-label">Metronome &middot; 60 BPM</span>
             </div>
+            <div id="live-tempo-control" class="live-tempo-control" hidden>
+              <label for="live-tempo-input">Tempo</label>
+              <input id="live-tempo-input" type="number" min="1" max="300" step="any" value="60" inputmode="decimal" aria-label="Tempo in BPM" />
+              <button id="resume-tempo-method" type="button" hidden>Resume</button>
+              <span id="live-tempo-status" role="status"></span>
+            </div>
             <span id="dynamics-label" class="dynamics-label" hidden></span>
             <button id="another-pdf" type="button" disabled>Next now <span aria-hidden="true">&rarr;</span></button>
           </div>
