@@ -95,6 +95,11 @@ let metronomeGain;
 let metronomeVolume = volumeToGain(Number(metronomeVolumeInput.value));
 let visualMetronomeTimer = null;
 let currentBpm = 60;
+let manualTempoOverride = false;
+const liveTempoControl = document.querySelector("#live-tempo-control");
+const liveTempoInput = document.querySelector("#live-tempo-input");
+const resumeTempoMethodButton = document.querySelector("#resume-tempo-method");
+const liveTempoStatus = document.querySelector("#live-tempo-status");
 let selectedFolderPdfs = [];
 let selectedSinglePdf = null;
 let practiceMode = "saved-sections";
@@ -391,8 +396,46 @@ async function prepareSessionDurationPlan() {
 function setCurrentTempo(tempo, method) {
   currentBpm = tempo;
   bpmLabel.textContent = `Metronome · ${currentBpm} BPM · ${method}`;
-  if (sessionStarted) startVisualMetronome();
+  if (sessionStarted || visualMetronomeTimer !== null) startVisualMetronome();
+  updateLiveTempoUi();
 }
+
+function updateLiveTempoUi() {
+  liveTempoControl.hidden = visualMetronomeTimer === null;
+  liveTempoInput.value = currentBpm;
+  resumeTempoMethodButton.hidden = !manualTempoOverride;
+  liveTempoStatus.textContent = manualTempoOverride ? "Manual tempo" : "";
+}
+
+function applyManualTempo(value) {
+  if (visualMetronomeTimer === null) return;
+  const tempo = Number(value);
+  if (!String(value).trim() || !Number.isFinite(tempo) || tempo < 1 || tempo > 300) {
+    liveTempoInput.value = currentBpm;
+    liveTempoStatus.textContent = "Enter a BPM from 1 to 300";
+    return;
+  }
+  manualTempoOverride = true;
+  clearTimeout(rampTimer);
+  setCurrentTempo(tempo, "Manual tempo");
+}
+
+liveTempoInput.addEventListener("change", () => applyManualTempo(liveTempoInput.value));
+liveTempoInput.addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    applyManualTempo(liveTempoInput.value);
+  }
+});
+resumeTempoMethodButton.addEventListener("click", () => {
+  manualTempoOverride = false;
+  if (!sessionStarted) setCurrentTempo(targetTempo, "Target tempo");
+  else {
+    applyTempoForNewPdf();
+    if (isStopped) clearTimeout(rampTimer);
+  }
+  updateLiveTempoUi();
+});
 
 function updateTempoMethodStatus(prefix = "Active") {
   tempoMethodStatus.textContent = `${prefix}: ${getTempoMethodDescription(activeTempoMethod, activeUseAnchorTempos)}`;
@@ -473,6 +516,7 @@ function startTotalSessionCountdown() {
 }
 
 function startBuildUp() {
+  if (manualTempoOverride) return;
   clearTimeout(rampTimer);
   const usesSessionClock = practiceMode === "single-section";
   const durationSeconds = usesSessionClock ? totalSessionSeconds : currentDisplayDurationSeconds;
@@ -511,6 +555,7 @@ function startBuildUp() {
 }
 
 function beginTempoMethod() {
+  manualTempoOverride = false;
   clearTimeout(rampTimer);
   activeTempoMethod = tempoMethod;
   activeUseAnchorTempos = useAnchorTempos;
@@ -518,6 +563,7 @@ function beginTempoMethod() {
 }
 
 function applyTempoForNewPdf() {
+  if (manualTempoOverride) return;
   if (activeTempoMethod === "random") {
     setRandomTempo();
   } else if (activeTempoMethod === "half-target") {
@@ -645,6 +691,7 @@ function startVisualMetronome() {
   beatInMeasure = 0;
   tick();
   visualMetronomeTimer = setInterval(tick, (60000 / currentBpm) * (4 / beatDenominator) * getBeatsPerClick());
+  updateLiveTempoUi();
 }
 
 async function showFullScoreAtSessionEnd() {
@@ -699,6 +746,7 @@ async function completeRound() {
   startSessionButton.disabled = true;
   stopButton.disabled = true;
   endSessionButton.hidden = false;
+  manualTempoOverride = false;
   setCurrentTempo(targetTempo, "Target tempo");
   startVisualMetronome();
 }
@@ -713,6 +761,8 @@ async function finishSession() {
   stopDynamicsPractice();
   clearInterval(visualMetronomeTimer);
   visualMetronomeTimer = null;
+  manualTempoOverride = false;
+  updateLiveTempoUi();
   await audioContext?.suspend();
   playlist = [];
   playlistIndex = 0;
@@ -1126,6 +1176,7 @@ async function showNextPdf() {
       await renderPage(1);
     }
     resetSectionClock();
+    if (practiceMode !== "single-section") manualTempoOverride = false;
     applyTempoForNewPdf();
     startDynamicsPractice();
     pageControls.hidden = result.type === "saved-section";
