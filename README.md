@@ -40,6 +40,8 @@ stephen adding stuff
 
 ## Folder-specific practice settings
 
+Set **BPM range**, **Target tempo**, and **Time signature** in the setup screen, then click **Download practice-settings.json** to export them. Place the downloaded file in your score folder, replacing the existing file if present. The download includes only these settings; tempo method and other session choices are not exported. Invalid values must be corrected before downloading.
+
 To give one score folder its own tempo range and time signature, add a file named
 `practice-settings.json` at the top level of that folder:
 

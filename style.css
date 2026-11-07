@@ -159,3 +159,6 @@ body[data-view="practice"] .setup-heading { display: none; }
 .readme-link { color: #284c3a; font-size: .85em; text-underline-offset: 3px; }
 .readme-link:hover { text-decoration-thickness: 2px; }
 .readme-new-tab { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.settings-download-control { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 14px; color: #536055; font-size: .69rem; }
+.settings-download-control button { padding: 8px 12px; font-size: .69rem; }
