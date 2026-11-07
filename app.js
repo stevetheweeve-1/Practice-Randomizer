@@ -575,6 +575,33 @@ function applyTempoForNewPdf() {
   }
 }
 
+document.querySelector("#download-practice-settings").addEventListener("click", () => {
+  const status = document.querySelector("#practice-settings-download-status");
+  const minBpm = Number(minBpmInput.value);
+  const maxBpm = Number(maxBpmInput.value);
+  const target = Number(targetTempoInput.value);
+  const signature = parseTimeSignature(beatsPerBarInput.value + "/" + noteValueInput.value);
+  const invalidBpm = input => !Number.isInteger(input) || input < 1 || input > 300;
+  const invalidInput = invalidBpm(minBpm) ? minBpmInput
+    : invalidBpm(maxBpm) ? maxBpmInput
+    : minBpm > maxBpm ? minBpmInput
+    : invalidBpm(target) ? targetTempoInput
+    : !signature ? beatsPerBarInput : null;
+  if (invalidInput) {
+    status.textContent = "Use whole-number BPM values from 1–300, minimum no greater than maximum, and a valid time signature.";
+    invalidInput.focus();
+    return;
+  }
+  const settings = { minBpm, maxBpm, timeSignature: signature.value, targetTempo: target };
+  const download = document.createElement("a");
+  const url = URL.createObjectURL(new Blob([JSON.stringify(settings, null, 2) + "\n"], { type: "application/json" }));
+  download.href = url;
+  download.download = "practice-settings.json";
+  download.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  status.textContent = "Downloaded practice-settings.json — place it in your score folder, replacing the previous file if present.";
+});
+
 function applyPracticeSettings(settings, source = "the defaults") {
   const timeSignature = parseTimeSignature(settings?.timeSignature);
   const minimum = settings?.minBpm;
