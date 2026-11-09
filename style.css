@@ -95,7 +95,8 @@ body[data-view="practice"] .setup-heading { display: none; }
 .section-editor-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
 .section-editor-heading h2 { margin: 0; font-size: 1.35rem; }
 .section-editor-heading button, .section-editor-actions button, .section-editor-controls button, .section-editor-page-controls button, .section-fragment-list button, .open-section-editor { padding: 8px 12px; border-radius: 6px; background: #66745d; font-size: .63rem; }
-.section-editor-help, .section-editor-status { color: #536055; font-size: .72rem; line-height: 1.55; }
+.section-editor-help, .section-editor-status, .section-source-status { color: #536055; font-size: .72rem; line-height: 1.55; }
+.section-source-status { margin: 10px 0 0; }
 .section-editor-controls, .section-editor-actions, .section-editor-page-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
 #delete-section-button { background: #98483f; }
 #delete-section-button:disabled { cursor: default; opacity: .5; }
