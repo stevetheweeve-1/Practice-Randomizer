@@ -63,6 +63,7 @@ const sectionEditor = document.querySelector("#section-editor");
 const openSectionEditorButton = document.querySelector("#open-section-editor");
 const closeSectionEditorButton = document.querySelector("#close-section-editor");
 const sectionSourceInput = document.querySelector("#section-source-input");
+const sectionSourceStatus = document.querySelector("#section-source-status");
 const editSectionInput = document.querySelector("#edit-section-input");
 const cancelSectionButton = document.querySelector("#cancel-section-button");
 const deleteSectionButton = document.querySelector("#delete-section-button");
@@ -938,13 +939,18 @@ function getRelativePdfPath(item) {
 
 function refreshSectionSourceList() {
   sectionSourceInput.replaceChildren();
-  selectedFolderPdfs.forEach((item, index) => {
+  selectedFolderPdfs.forEach((item) => {
+    const sourcePath = getRelativePdfPath(item);
     const option = document.createElement("option");
-    option.value = String(index);
-    option.textContent = getRelativePdfPath(item);
+    option.value = sourcePath;
+    option.textContent = sourcePath;
     sectionSourceInput.append(option);
   });
-  if (editorSourceItem) sectionSourceInput.value = String(selectedFolderPdfs.indexOf(editorSourceItem));
+  if (editorSourceItem) sectionSourceInput.value = getRelativePdfPath(editorSourceItem);
+  const sourcePath = sectionSourceInput.value;
+  sectionSourceStatus.textContent = sourcePath
+    ? "Selected source: " + sourcePath
+    : "Choose a source PDF to edit.";
   openSectionEditorButton.disabled = !selectedFolderPdfs.length;
 }
 
@@ -1106,9 +1112,14 @@ async function renderEditorPage() {
 }
 
 async function loadEditorSource() {
-  editorSourceItem = selectedFolderPdfs[Number(sectionSourceInput.value)] ?? null;
-  if (!editorSourceItem) return;
-  sectionEditorStatus.textContent = "Loading " + editorSourceItem.name + "…";
+  const sourcePath = sectionSourceInput.value;
+  editorSourceItem = selectedFolderPdfs.find((item) => getRelativePdfPath(item) === sourcePath) ?? null;
+  if (!editorSourceItem) {
+    sectionSourceStatus.textContent = "Could not find the selected source PDF.";
+    return;
+  }
+  sectionSourceStatus.textContent = "Editing source: " + sourcePath;
+  sectionEditorStatus.textContent = "Loading " + sourcePath + "…";
   editorPdf = await pdfjsLib.getDocument({ data: await editorSourceItem.file.arrayBuffer() }).promise;
   editorPage = 1;
   editorIsDrawing = true;
@@ -1549,7 +1560,7 @@ deleteSectionButton.addEventListener("click", async () => {
 });
 sectionSourceInput.addEventListener("change", async () => {
   if (!confirmDiscardSection()) {
-    sectionSourceInput.value = String(selectedFolderPdfs.indexOf(editorSourceItem));
+    sectionSourceInput.value = editorSourceItem ? getRelativePdfPath(editorSourceItem) : "";
     return;
   }
   await loadEditorSource();
@@ -1640,7 +1651,7 @@ saveSectionButton.addEventListener("click", async () => {
     sectionEditorStatus.textContent = "Enter a name and add at least one fragment before saving.";
     return;
   }
-  const section = { type: "saved-section", name, sourcePath: getRelativePdfPath(editorSourceItem), sourceFile: editorSourceItem.file, fragments: draftFragments.map((fragment) => ({ ...fragment })) };
+  const section = { type: "saved-section", name, sourcePath: sectionSourceInput.value, sourceFile: editorSourceItem.file, fragments: draftFragments.map((fragment) => ({ ...fragment })) };
   if (editingSection) {
     if (selectedSections.delete(editingSection)) selectedSections.add(section);
     savedSections[savedSections.indexOf(editingSection)] = section;
