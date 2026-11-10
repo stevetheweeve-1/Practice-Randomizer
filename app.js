@@ -129,8 +129,8 @@ let beatInMeasure = 0;
 let minimumBpm = 60;
 let maximumBpm = 120;
 let targetTempo = Number(targetTempoInput.value);
-let tempoMethod = "random";
-let activeTempoMethod = "random";
+let tempoMethod = "target";
+let activeTempoMethod = "target";
 let useAnchorTempos = false;
 let activeUseAnchorTempos = false;
 let rampTimer;
@@ -187,7 +187,7 @@ const practiceModeLabels = {
   "saved-sections": "Saved sections (random)",
   "saved-sections-ordered": "Saved sections",
   "saved-sections-selected": "Selected sections",
-  "saved-sections-reverse": "Saved sections (reverse)",
+  "saved-sections-reverse": "Saved sections (reversed)",
   "single-section": "One section",
 };
 
