@@ -73,17 +73,44 @@ code { padding: 2px 5px; background: #e3e7d8; }
 body[data-view="setup"] main { display: flex; flex-direction: column; }
 body[data-view="setup"] .options-panel { order: 1; padding: clamp(22px, 4vw, 34px); border: 1px solid #9da891; border-radius: 18px; background: #f7f4eb; box-shadow: 8px 9px 0 #bcc7ae; }
 body[data-view="setup"] .top-session-control { order: 2; display: flex; justify-content: center; margin-top: 24px; }
+body[data-view="setup"] .practice-history-toggle { order: 3; }
+body[data-view="setup"] .practice-history { order: 4; }
 body[data-view="setup"] .top-countdown { display: none; }
 body[data-view="setup"] .viewer-card,
 body[data-view="setup"] .count,
 body[data-view="setup"] .stop-button,
 body[data-view="setup"] .end-session-button { display: none; }
 body[data-view="practice"] .options-panel,
-body[data-view="practice"] .start-session-button { display: none; }
+body[data-view="practice"] .start-session-button,
+body[data-view="practice"] .practice-history { display: none; }
 .setup-heading { margin-bottom: 30px; }
 .setup-heading h1 { font-size: clamp(2.3rem, 6vw, 4.2rem); line-height: .96; margin: 0; }
 .setup-heading p:last-child { max-width: 530px; color: #536055; line-height: 1.7; margin: 16px 0 0; }
 body[data-view="practice"] .setup-heading { display: none; }
+.practice-history-toggle { margin-top: 18px; padding: 9px 13px; border-radius: 6px; background: #66745d; font-size: .68rem; }
+.practice-history { margin: 0 0 26px; padding: clamp(20px, 4vw, 30px); border: 1px solid #9da891; border-radius: 18px; background: #eef0e6; box-shadow: 6px 7px 0 #c6cfba; }
+.practice-history[hidden] { display: none; }
+.practice-history-heading, .practice-history-recent-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.practice-history-heading h2, .practice-history-recent-heading h3 { margin: 0; }
+.practice-history-heading h2 { font-size: 1.45rem; }
+.practice-history-heading button, .practice-history-actions button, .import-practice-history { padding: 8px 12px; border: 0; border-radius: 6px; background: #66745d; color: #fffdf6; cursor: pointer; font: 500 .66rem "DM Mono", monospace; }
+.practice-history-status { min-height: 1.55em; margin: 14px 0 0; color: #536055; font-size: .72rem; }
+.practice-history-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+.practice-history-summary article { padding: 13px; border: 1px solid #b4bfaa; border-radius: 9px; background: #f7f4eb; }
+.practice-history-summary span, .practice-history-recent-heading span { display: block; color: #657067; font-size: .64rem; }
+.practice-history-summary strong { display: block; margin-top: 6px; color: #284c3a; font: 600 1.25rem Fraunces, Georgia, serif; }
+.practice-history-breakdown { margin-top: 16px; color: #536055; font-size: .72rem; line-height: 1.55; }
+.practice-history-breakdown p { margin: 0; }
+.practice-history-recent-heading { align-items: baseline; margin-top: 20px; }
+.practice-history-recent-heading h3 { color: #284c3a; font-size: 1rem; }
+.practice-history-recent { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.practice-history-recent li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; padding: 11px; border: 1px solid #c8cdbd; border-radius: 8px; background: #f7f4eb; color: #536055; font-size: .7rem; }
+.practice-history-recent strong { color: #284c3a; font-weight: 500; overflow-wrap: anywhere; }
+.practice-history-recent time, .practice-history-recent span { color: #657067; font-size: .64rem; }
+.practice-history-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+.import-practice-history { display: inline-flex; align-items: center; }
+.practice-history-actions .clear-practice-history { background: #8d4b3d; }
+@media (max-width: 600px) { .practice-history-summary { grid-template-columns: 1fr; } .practice-history-heading { flex-direction: column; } }
 .practice-mode-control, .single-pdf-picker { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #536055; font-size: .69rem; }
 .single-pdf-picker[hidden] { display: none; }
 .practice-mode-control select, .single-pdf-picker select { max-width: min(320px, 100%); border: 1px solid #9da891; border-radius: 5px; background: #f7f4eb; color: #243228; font: inherit; padding: 7px; }

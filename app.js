@@ -81,6 +81,20 @@ const sectionFragmentList = document.querySelector("#section-fragment-list");
 const saveSectionButton = document.querySelector("#save-section-button");
 const exportSectionsButton = document.querySelector("#export-sections-button");
 const sectionEditorStatus = document.querySelector("#section-editor-status");
+const openPracticeHistoryButton = document.querySelector("#open-practice-history");
+const closePracticeHistoryButton = document.querySelector("#close-practice-history");
+const practiceHistoryPanel = document.querySelector("#practice-history");
+const practiceHistoryStatus = document.querySelector("#practice-history-status");
+const practiceHistoryToday = document.querySelector("#practice-history-today");
+const practiceHistoryWeek = document.querySelector("#practice-history-week");
+const practiceHistoryMonth = document.querySelector("#practice-history-month");
+const practiceHistoryBreakdown = document.querySelector("#practice-history-breakdown");
+const practiceHistoryCount = document.querySelector("#practice-history-count");
+const practiceHistoryRecent = document.querySelector("#practice-history-recent");
+const exportPracticeHistoryButton = document.querySelector("#export-practice-history");
+const importPracticeHistoryInput = document.querySelector("#import-practice-history-input");
+const clearPracticeHistoryButton = document.querySelector("#clear-practice-history");
+const optionsPanel = document.querySelector(".options-panel");
 let documentPdf;
 let currentPage = 1;
 let playlist = [];
@@ -143,6 +157,14 @@ let editorBaseline = "";
 let editorIsDrawing = false;
 let editorDragStart = null;
 let editorSelection = null;
+const practiceHistoryDatabaseName = "practice-randomizer-history";
+const practiceHistoryStoreName = "sessions";
+const practiceHistoryFallbackKey = "practice-randomizer-history-v1";
+let practiceHistoryDatabasePromise;
+let activePracticeHistorySession = null;
+let activePracticeHistoryItem = null;
+let practiceHistoryClearConfirmationPending = false;
+let practiceHistoryClearConfirmationTimer;
 const defaultPracticeSettings = Object.freeze({
   minimumBpm,
   maximumBpm,
@@ -159,6 +181,282 @@ const savedSectionOverlayPalette = [
   { fill: "#cf849144", border: "#8f3d4a57", label: "#cf849144" },
   { fill: "#75af9c44", border: "#1f705b57", label: "#75af9c44" },
 ];
+
+const practiceModeLabels = {
+  "whole-piece": "Full score",
+  "saved-sections": "Saved sections (random)",
+  "saved-sections-ordered": "Saved sections",
+  "saved-sections-selected": "Selected sections",
+  "saved-sections-reverse": "Saved sections (reverse)",
+  "single-section": "One section",
+};
+
+function createPracticeHistoryId() {
+  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function requestAsPromise(request) {
+  return new Promise((resolve, reject) => {
+    request.addEventListener("success", () => resolve(request.result), { once: true });
+    request.addEventListener("error", () => reject(request.error), { once: true });
+  });
+}
+
+function openPracticeHistoryDatabase() {
+  if (!globalThis.indexedDB) return Promise.reject(new Error("IndexedDB is unavailable"));
+  if (practiceHistoryDatabasePromise) return practiceHistoryDatabasePromise;
+  practiceHistoryDatabasePromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open(practiceHistoryDatabaseName, 1);
+    request.addEventListener("upgradeneeded", () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains(practiceHistoryStoreName)) {
+        database.createObjectStore(practiceHistoryStoreName, { keyPath: "id" });
+      }
+    });
+    request.addEventListener("success", () => resolve(request.result), { once: true });
+    request.addEventListener("error", () => reject(request.error), { once: true });
+  });
+  return practiceHistoryDatabasePromise;
+}
+
+function getFallbackPracticeHistory() {
+  try {
+    const sessions = JSON.parse(localStorage.getItem(practiceHistoryFallbackKey) ?? "[]");
+    return Array.isArray(sessions) ? sessions : [];
+  } catch {
+    return [];
+  }
+}
+
+function setFallbackPracticeHistory(sessions) {
+  localStorage.setItem(practiceHistoryFallbackKey, JSON.stringify(sessions));
+}
+
+async function getPracticeHistorySessions() {
+  try {
+    const database = await openPracticeHistoryDatabase();
+    const transaction = database.transaction(practiceHistoryStoreName, "readonly");
+    const sessions = await requestAsPromise(transaction.objectStore(practiceHistoryStoreName).getAll());
+    return sessions.sort((a, b) => new Date(b.endedAt ?? b.startedAt) - new Date(a.endedAt ?? a.startedAt));
+  } catch {
+    return getFallbackPracticeHistory().sort((a, b) => new Date(b.endedAt ?? b.startedAt) - new Date(a.endedAt ?? a.startedAt));
+  }
+}
+
+async function savePracticeHistorySession(session) {
+  try {
+    const database = await openPracticeHistoryDatabase();
+    const transaction = database.transaction(practiceHistoryStoreName, "readwrite");
+    transaction.objectStore(practiceHistoryStoreName).put(session);
+    await new Promise((resolve, reject) => {
+      transaction.addEventListener("complete", resolve, { once: true });
+      transaction.addEventListener("error", () => reject(transaction.error), { once: true });
+      transaction.addEventListener("abort", () => reject(transaction.error), { once: true });
+    });
+  } catch {
+    const sessions = getFallbackPracticeHistory();
+    const index = sessions.findIndex((item) => item.id === session.id);
+    if (index >= 0) sessions[index] = session;
+    else sessions.push(session);
+    setFallbackPracticeHistory(sessions);
+  }
+}
+
+async function clearPracticeHistorySessions() {
+  try {
+    const database = await openPracticeHistoryDatabase();
+    const transaction = database.transaction(practiceHistoryStoreName, "readwrite");
+    transaction.objectStore(practiceHistoryStoreName).clear();
+    await new Promise((resolve, reject) => {
+      transaction.addEventListener("complete", resolve, { once: true });
+      transaction.addEventListener("error", () => reject(transaction.error), { once: true });
+      transaction.addEventListener("abort", () => reject(transaction.error), { once: true });
+    });
+  } catch {}
+  localStorage.removeItem(practiceHistoryFallbackKey);
+}
+
+function formatPracticeDuration(totalSeconds) {
+  const seconds = Math.max(0, Math.round(totalSeconds || 0));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours) return `${hours}h ${minutes}m`;
+  if (minutes) return `${minutes}m`;
+  return seconds ? "<1m" : "0m";
+}
+
+function getStartOfLocalDay(daysAgo = 0) {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() - daysAgo);
+  return date;
+}
+
+function getSessionActiveSeconds(session) {
+  return Number.isFinite(session.activeSeconds) ? session.activeSeconds : 0;
+}
+
+function getPracticeHistoryBreakdown(sessions) {
+  const scores = new Map();
+  sessions.forEach((session) => {
+    const name = session.scoreName ?? "Practice session";
+    const current = scores.get(name) ?? { name, seconds: 0 };
+    current.seconds += getSessionActiveSeconds(session);
+    scores.set(name, current);
+  });
+  return [...scores.values()].sort((a, b) => b.seconds - a.seconds).slice(0, 3);
+}
+
+function getPracticeHistoryItemLabel(item, tempoMethod) {
+  const name = item.name ?? "Untitled";
+  if (!["target", "half-target", "build-up"].includes(tempoMethod)) return name;
+  const tempos = [...new Set((item.tempoEvents ?? [])
+    .map((event) => Number(event.bpm))
+    .filter((tempo) => Number.isFinite(tempo)))];
+  return tempos.length ? `${name} (${tempos.join(" → ")} BPM)` : name;
+}
+
+function getPracticeHistoryTempoSummary(session) {
+  const tempoMethod = session.settings?.tempoMethod;
+  if (!["target", "half-target", "build-up"].includes(tempoMethod)) return "";
+  const tempos = [...new Set((session.items ?? []).flatMap((item) => item.tempoEvents ?? [])
+    .map((event) => Number(event.bpm))
+    .filter((tempo) => Number.isFinite(tempo)))];
+  return tempos.length ? ` · ${tempos.join(" → ")} BPM` : "";
+}
+
+async function renderPracticeHistory() {
+  practiceHistoryStatus.textContent = "Loading practice history…";
+  const sessions = await getPracticeHistorySessions();
+  const todayStart = getStartOfLocalDay();
+  const weekStart = getStartOfLocalDay(6);
+  const monthStart = getStartOfLocalDay(29);
+  const totalSince = (start) => sessions
+    .filter((session) => new Date(session.startedAt) >= start)
+    .reduce((total, session) => total + getSessionActiveSeconds(session), 0);
+
+  practiceHistoryToday.textContent = formatPracticeDuration(totalSince(todayStart));
+  practiceHistoryWeek.textContent = formatPracticeDuration(totalSince(weekStart));
+  practiceHistoryMonth.textContent = formatPracticeDuration(totalSince(monthStart));
+  practiceHistoryCount.textContent = `${sessions.length} saved session${sessions.length === 1 ? "" : "s"}`;
+  practiceHistoryStatus.textContent = sessions.length
+    ? "Practice history is stored only in this browser."
+    : "No completed sessions yet. Start practicing to build your history.";
+
+  practiceHistoryBreakdown.replaceChildren();
+  const breakdown = getPracticeHistoryBreakdown(sessions.filter((session) => new Date(session.startedAt) >= monthStart));
+  if (breakdown.length) {
+    const text = document.createElement("p");
+    text.textContent = "Most-practiced scores this month: " + breakdown
+      .map((item) => `${item.name} (${formatPracticeDuration(item.seconds)})`).join(" · ");
+    practiceHistoryBreakdown.append(text);
+  }
+
+  practiceHistoryRecent.replaceChildren();
+  sessions.slice(0, 10).forEach((session) => {
+    const entry = document.createElement("li");
+    const details = document.createElement("div");
+    const score = document.createElement("strong");
+    score.textContent = session.scoreName ?? "Practice session";
+    const summary = document.createElement("span");
+    const itemCount = session.items?.length ?? 0;
+    const tempoMethod = session.settings?.tempoMethod;
+    summary.textContent = ` ${practiceModeLabels[session.practiceMode] ?? session.practiceMode ?? "Practice"} · ${tempoMethodLabels[tempoMethod] ?? tempoMethod ?? "Tempo not recorded"}${getPracticeHistoryTempoSummary(session)}`;
+    details.append(score, summary);
+    const itemNames = [...new Set((session.items ?? []).map((item) => item.name).filter(Boolean))].slice(0, 3);
+    const shouldShowPracticedItems = ["whole-piece", "saved-sections-selected", "single-section"].includes(session.practiceMode);
+    if (shouldShowPracticedItems && itemNames.length) {
+      const items = document.createElement("span");
+      const itemLabels = (session.items ?? [])
+        .filter((item, index, collection) => item.name && collection.findIndex((candidate) => candidate.name === item.name) === index)
+        .slice(0, 3)
+        .map((item) => getPracticeHistoryItemLabel(item, tempoMethod));
+      items.textContent = ` Practiced: ${itemLabels.join(" · ")}${itemCount > itemLabels.length ? " · …" : ""}`;
+      details.append(items);
+    }
+    const timing = document.createElement("div");
+    const date = document.createElement("time");
+    const startedAt = new Date(session.startedAt);
+    date.dateTime = session.startedAt;
+    date.textContent = Number.isNaN(startedAt.valueOf()) ? "Unknown date" : startedAt.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    const duration = document.createElement("span");
+    duration.textContent = ` ${formatPracticeDuration(getSessionActiveSeconds(session))}`;
+    timing.append(date, duration);
+    entry.append(details, timing);
+    practiceHistoryRecent.append(entry);
+  });
+}
+
+function getPracticeHistoryScoreName() {
+  const firstPdf = selectedFolderPdfs[0];
+  if (!firstPdf) return "Practice session";
+  return firstPdf.file.webkitRelativePath.split("/")[0] || firstPdf.name;
+}
+
+function beginPracticeHistorySession() {
+  activePracticeHistorySession = {
+    id: createPracticeHistoryId(),
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    status: "active",
+    activeSeconds: 0,
+    scoreName: getPracticeHistoryScoreName(),
+    practiceMode,
+    settings: {
+      minimumBpm,
+      maximumBpm,
+      targetTempo,
+      timeSignature: `${beatsPerMeasure}/${beatDenominator}`,
+      tempoMethod: activeTempoMethod,
+      dynamicsEnabled,
+    },
+    items: [],
+  };
+  activePracticeHistoryItem = null;
+}
+
+function startPracticeHistoryItem(result) {
+  if (!activePracticeHistorySession) return;
+  activePracticeHistoryItem = {
+    name: result.name,
+    sourcePath: result.sourcePath ?? result.path ?? result.name,
+    type: result.type ?? "score",
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    activeSeconds: 0,
+    dynamics: dynamicsLabel.hidden ? null : dynamicsLabel.textContent.replace("Dynamics · ", ""),
+    tempoEvents: [{ seconds: 0, bpm: currentBpm, method: activeTempoMethod }],
+  };
+  activePracticeHistorySession.items.push(activePracticeHistoryItem);
+}
+
+function recordPracticeHistoryTempo(tempo, method) {
+  if (!activePracticeHistoryItem) return;
+  const seconds = Math.max(0, Math.round(getSectionElapsedMs() / 1000));
+  const previous = activePracticeHistoryItem.tempoEvents.at(-1);
+  if (previous?.bpm === tempo && previous?.method === method) return;
+  activePracticeHistoryItem.tempoEvents.push({ seconds, bpm: tempo, method });
+}
+
+function finalizePracticeHistoryItem() {
+  if (!activePracticeHistoryItem) return;
+  activePracticeHistoryItem.activeSeconds = Math.max(0, Math.round(getSectionElapsedMs() / 1000));
+  activePracticeHistoryItem.endedAt = new Date().toISOString();
+  activePracticeHistoryItem = null;
+}
+
+async function finalizePracticeHistorySession(status) {
+  if (!activePracticeHistorySession) return;
+  finalizePracticeHistoryItem();
+  const session = activePracticeHistorySession;
+  activePracticeHistorySession = null;
+  if (!session.items.length) return;
+  session.endedAt = new Date().toISOString();
+  session.status = status;
+  session.activeSeconds = session.items.reduce((total, item) => total + (Number(item.activeSeconds) || 0), 0);
+  await savePracticeHistorySession(session);
+  if (!practiceHistoryPanel.hidden) await renderPracticeHistory();
+}
 
 function showSetupView() {
   document.body.dataset.view = "setup";
@@ -397,6 +695,7 @@ async function prepareSessionDurationPlan() {
 function setCurrentTempo(tempo, method) {
   currentBpm = tempo;
   bpmLabel.textContent = `Metronome · ${currentBpm} BPM · ${method}`;
+  recordPracticeHistoryTempo(currentBpm, method);
   if (sessionStarted || visualMetronomeTimer !== null) startVisualMetronome();
   updateLiveTempoUi();
 }
@@ -747,10 +1046,11 @@ async function showFullScoreAtSessionEnd() {
 
 async function completeRound() {
   if (targetTempo === null) {
-    await finishSession();
+    await finishSession("completed");
     return;
   }
 
+  await finalizePracticeHistorySession("completed");
   clearTimeout(rotationTimer);
   clearInterval(countdownTimer);
   clearTimeout(rampTimer);
@@ -779,7 +1079,8 @@ async function completeRound() {
   startVisualMetronome();
 }
 
-async function finishSession() {
+async function finishSession(status = "ended") {
+  await finalizePracticeHistorySession(status);
   isStopped = true;
   sessionStarted = false;
   clearTimeout(rotationTimer);
@@ -913,6 +1214,7 @@ function refreshSinglePdfPractice() {
   // The session-wide Build up continues independently of refresh intervals.
   if (activeTempoMethod !== "build-up") applyTempoForNewPdf();
   startDynamicsPractice();
+  if (selectedSinglePdf) startPracticeHistoryItem(selectedSinglePdf);
   startCountdown();
 }
 
@@ -1173,6 +1475,7 @@ async function renderSavedSection(section) {
 
 async function showNextPdf() {
   if (isStopped) return;
+  finalizePracticeHistoryItem();
   button.disabled = true;
   button.firstChild.textContent = "Loading… ";
   try {
@@ -1217,6 +1520,7 @@ async function showNextPdf() {
     if (practiceMode !== "single-section") manualTempoOverride = false;
     applyTempoForNewPdf();
     startDynamicsPractice();
+    startPracticeHistoryItem(result);
     pageControls.hidden = result.type === "saved-section";
     fileName.textContent = result.name;
     collectionCount.textContent = "";
@@ -1261,6 +1565,7 @@ startSessionButton.addEventListener("click", async () => {
   }
   sessionStarted = true;
   isStopped = false;
+  beginPracticeHistorySession();
   resetTotalSessionClock();
   startTotalSessionCountdown();
   showPracticeView();
@@ -1677,8 +1982,91 @@ sectionEditorPreviousPage.addEventListener("click", () => { if (editorPage > 1) 
 sectionEditorNextPage.addEventListener("click", () => { if (editorPdf && editorPage < editorPdf.numPages) { editorPage += 1; renderEditorPage(); } });
 previousPage.addEventListener("click", () => currentPage > 1 && renderPage(currentPage - 1));
 nextPage.addEventListener("click", () => currentPage < documentPdf.numPages && renderPage(currentPage + 1));
+
+function setPracticeHistoryVisible(isVisible) {
+  practiceHistoryPanel.hidden = !isVisible;
+  openPracticeHistoryButton.setAttribute("aria-expanded", String(isVisible));
+  if (isVisible) void renderPracticeHistory();
+  else resetPracticeHistoryClearConfirmation();
+}
+
+function placePracticeHistoryAfterSetup() {
+  if (!optionsPanel || !openPracticeHistoryButton || !practiceHistoryPanel) return;
+  optionsPanel.insertAdjacentElement("afterend", openPracticeHistoryButton);
+  openPracticeHistoryButton.insertAdjacentElement("afterend", practiceHistoryPanel);
+}
+
+function resetPracticeHistoryClearConfirmation() {
+  practiceHistoryClearConfirmationPending = false;
+  clearTimeout(practiceHistoryClearConfirmationTimer);
+  clearPracticeHistoryButton.textContent = "Clear history";
+}
+
+openPracticeHistoryButton.addEventListener("click", () => setPracticeHistoryVisible(true));
+closePracticeHistoryButton.addEventListener("click", () => {
+  setPracticeHistoryVisible(false);
+  openPracticeHistoryButton.focus();
+});
+exportPracticeHistoryButton.addEventListener("click", async () => {
+  const sessions = await getPracticeHistorySessions();
+  const data = { version: 1, exportedAt: new Date().toISOString(), sessions };
+  const download = document.createElement("a");
+  download.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2) + "\n"], { type: "application/json" }));
+  download.download = "practice-history.json";
+  download.click();
+  setTimeout(() => URL.revokeObjectURL(download.href), 0);
+  practiceHistoryStatus.textContent = `Downloaded ${sessions.length} practice session${sessions.length === 1 ? "" : "s"}.`;
+});
+importPracticeHistoryInput.addEventListener("change", async () => {
+  const file = importPracticeHistoryInput.files?.[0];
+  importPracticeHistoryInput.value = "";
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    const incomingSessions = Array.isArray(data) ? data : data.sessions;
+    if (!Array.isArray(incomingSessions)) throw new Error("Expected a practice-history export");
+    const existingIds = new Set((await getPracticeHistorySessions()).map((session) => session.id));
+    const sessionsToImport = incomingSessions.filter((session) =>
+      session && typeof session === "object" && typeof session.startedAt === "string" && !existingIds.has(session.id));
+    for (const session of sessionsToImport) {
+      if (typeof session.id !== "string" || !session.id) session.id = createPracticeHistoryId();
+      if (!Array.isArray(session.items)) session.items = [];
+      if (!Number.isFinite(session.activeSeconds)) {
+        session.activeSeconds = session.items.reduce((total, item) => total + (Number(item.activeSeconds) || 0), 0);
+      }
+      await savePracticeHistorySession(session);
+    }
+    await renderPracticeHistory();
+    practiceHistoryStatus.textContent = sessionsToImport.length
+      ? `Imported ${sessionsToImport.length} practice session${sessionsToImport.length === 1 ? "" : "s"}.`
+      : "No new practice sessions found in that file.";
+  } catch {
+    practiceHistoryStatus.textContent = "That file is not a valid practice-history export.";
+  }
+});
+clearPracticeHistoryButton.addEventListener("click", async () => {
+  if (!practiceHistoryClearConfirmationPending) {
+    practiceHistoryClearConfirmationPending = true;
+    clearPracticeHistoryButton.textContent = "Click again to confirm";
+    practiceHistoryStatus.textContent = "Click Clear history again to permanently remove all saved sessions.";
+    clearTimeout(practiceHistoryClearConfirmationTimer);
+    practiceHistoryClearConfirmationTimer = setTimeout(() => {
+      resetPracticeHistoryClearConfirmation();
+      practiceHistoryStatus.textContent = "Clear history was not confirmed.";
+    }, 10000);
+    return;
+  }
+  await clearPracticeHistorySessions();
+  resetPracticeHistoryClearConfirmation();
+  await renderPracticeHistory();
+  practiceHistoryStatus.textContent = "Practice history cleared from this browser.";
+});
+window.addEventListener("pagehide", () => {
+  if (activePracticeHistorySession) void finalizePracticeHistorySession("interrupted");
+});
 updatePracticeModeUi();
 updateTempoAnchorUi();
+placePracticeHistoryAfterSetup();
 rotationStatus.textContent = "Choose the folder containing the score to begin";
 viewer.hidden = true;
 loading.hidden = true;

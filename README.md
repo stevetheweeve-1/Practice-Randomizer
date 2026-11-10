@@ -38,6 +38,12 @@ Use **BPM range** to set inclusive lower and upper limits (1–300) for the Rand
 
 stephen adding stuff
 
+## Practice history
+
+Use **Practice history** on the setup screen to review active practice time for today, the last 7 days, and the last 30 days. The app also records the score or saved section, practice mode, tempo changes, and dynamics instruction for each completed session. Time spent paused is excluded.
+
+History is stored locally in your browser; score files and full local folder paths are never uploaded. Use **Download practice history** to create a JSON backup or move the history to another browser with **Import practice history**. Clearing browser data can remove local history, so download a backup if you want to keep it.
+
 ## Folder-specific practice settings
 
 Set **BPM range**, **Target tempo**, and **Time signature** in the setup screen, then click **Download practice-settings.json** to export them. Place the downloaded file in your score folder, replacing the existing file if present. The download includes only these settings; tempo method and other session choices are not exported. Invalid values must be corrected before downloading.
