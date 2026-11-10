@@ -187,7 +187,7 @@ const practiceModeLabels = {
   "saved-sections": "Saved sections (random)",
   "saved-sections-ordered": "Saved sections",
   "saved-sections-selected": "Selected sections",
-  "saved-sections-reverse": "Saved sections (reverse)",
+  "saved-sections-reverse": "Saved sections (reversed)",
   "single-section": "One section",
 };
 
