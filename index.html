@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Random PDF</title>
-    <link rel="stylesheet" href="style.css?v=section-editor-draw-1" />
+    <link rel="stylesheet" href="style.css?v=practice-history-layout-3" />
   </head>
   <body data-view="setup">
     <main>
@@ -216,7 +216,35 @@
           <button id="dynamics-toggle" class="dynamics-toggle" type="button">Dynamics off</button>
         </div>
       </section>
+      <button id="open-practice-history" class="practice-history-toggle" type="button" aria-expanded="false" aria-controls="practice-history">Practice history</button>
+      <section id="practice-history" class="practice-history" aria-labelledby="practice-history-heading" hidden>
+        <div class="practice-history-heading">
+          <div>
+            <p class="label">PRACTICE HISTORY</p>
+            <h2 id="practice-history-heading">Your practice at a glance</h2>
+          </div>
+          <button id="close-practice-history" type="button">Close history</button>
+        </div>
+        <p id="practice-history-status" class="practice-history-status" role="status">Loading practice history…</p>
+        <div class="practice-history-summary" aria-label="Practice time summaries">
+          <article><span>Today</span><strong id="practice-history-today">—</strong></article>
+          <article><span>Last 7 days</span><strong id="practice-history-week">—</strong></article>
+          <article><span>Last 30 days</span><strong id="practice-history-month">—</strong></article>
+        </div>
+        <div id="practice-history-breakdown" class="practice-history-breakdown"></div>
+        <div class="practice-history-recent-heading">
+          <h3>Recent sessions</h3>
+          <span id="practice-history-count"></span>
+        </div>
+        <ol id="practice-history-recent" class="practice-history-recent"></ol>
+        <div class="practice-history-actions">
+          <button id="export-practice-history" type="button">Download practice history</button>
+          <label class="import-practice-history" for="import-practice-history-input">Import practice history</label>
+          <input id="import-practice-history-input" type="file" accept="application/json,.json" hidden />
+          <button id="clear-practice-history" class="clear-practice-history" type="button">Clear history</button>
+        </div>
+      </section>
     </main>
-    <script type="module" src="app.js?v=saved-section-modes-1"></script>
+    <script type="module" src="app.js?v=practice-history-layout-2"></script>
   </body>
 </html>
