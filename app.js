@@ -47,6 +47,7 @@ const singlePdfInput = document.querySelector("#single-pdf-input");
 const singlePdfStatus = document.querySelector("#single-pdf-status");
 const clickPatternInputs = document.querySelectorAll('input[name="click-pattern"]');
 const twoClicksOption = document.querySelector("#two-clicks-option");
+const everyBeatLabel = document.querySelector("#every-beat-label");
 const beatsPerBarInput = document.querySelector("#beats-per-bar-input");
 const noteValueInput = document.querySelector("#note-value-input");
 const timeSignatureStatus = document.querySelector("#time-signature-status");
@@ -493,8 +494,12 @@ function populateSinglePdfPicker() {
 let singleBuildUpTiming = false;
 let previousDisplayDurationSeconds = displayDurationSeconds;
 
+function usesSinglePracticeTiming() {
+  return practiceMode === "single-section" || practiceMode === "whole-piece";
+}
+
 function updateDurationControl() {
-  const isSingleBuildUp = practiceMode === "single-section" && tempoMethod === "build-up";
+  const isSingleBuildUp = usesSinglePracticeTiming() && tempoMethod === "build-up";
   if (isSingleBuildUp !== singleBuildUpTiming) {
     if (isSingleBuildUp) {
       previousDisplayDurationSeconds = displayDurationSeconds;
@@ -508,7 +513,17 @@ function updateDurationControl() {
   }
   durationLabel.textContent = isSingleBuildUp
     ? "Increase metronome speed every"
-    : practiceMode === "single-section" ? "Refresh tempo and dynamics every" : "Display each PDF for";
+    : usesSinglePracticeTiming() ? "Refresh tempo and dynamics every" : "Display each section for";
+  const calculatedInterval = isSingleBuildUp && tempoAnchorInput.checked;
+  durationInput.readOnly = calculatedInterval;
+  durationInput.step = calculatedInterval ? "any" : "1";
+  if (calculatedInterval) {
+    durationInput.value = totalSessionSeconds === null ? "" : Number((totalSessionSeconds / 3).toFixed(3));
+    durationStatus.textContent = totalSessionSeconds === null ? "Set a total session time" : "Calculated from total session time";
+  } else if (isSingleBuildUp) {
+    durationInput.value = displayDurationSeconds;
+    durationStatus.textContent = "";
+  }
 }
 
 function updatePracticeModeUi() {
@@ -525,7 +540,7 @@ function updatePracticeModeUi() {
   const isSavedSections = isSavedSectionsMode();
   totalSessionForm.hidden = false;
   updateDurationControl();
-  button.firstChild.textContent = isSingle ? "Refresh now " : "Next now ";
+  button.firstChild.textContent = usesSinglePracticeTiming() ? "Refresh now " : "Next now ";
   if (isSavedSections) {
     sessionDurationPlan = [];
     totalSessionForm.hidden = false;
@@ -535,9 +550,11 @@ function updatePracticeModeUi() {
     if (isSelected) practiceModeStatus.textContent = getActivePdfs().length
       ? getActivePdfs().length + " selected sections · " + selectedSectionsOrder.selectedOptions[0].textContent.toLowerCase() + " order"
       : "Select at least one section";
-  } else if (isSingle) {
+  } else if (usesSinglePracticeTiming()) {
     sessionDurationPlan = [];
-    practiceModeStatus.textContent = "Repeat one saved section; tempo and dynamics refresh each interval";
+    practiceModeStatus.textContent = isSingle
+      ? "Repeat one saved section; tempo and dynamics refresh each interval"
+      : "Tempo and dynamics refresh each interval";
     totalSessionStatus.textContent = totalSessionSeconds === null
       ? "Optional second timer"
       : "Total timer: " + Math.round(totalSessionSeconds / 60) + " minutes";
@@ -615,7 +632,7 @@ function parseTimeSignature(value) {
   const match = typeof value === "string" && value.trim().match(/^(\d+)\/(\d+)$/);
   const numerator = match && Number(match[1]);
   const denominator = match && Number(match[2]);
-  const allowedDenominators = [1, 2, 4, 8, 16];
+  const allowedDenominators = [2, 4, 8];
   if (!Number.isInteger(numerator) || numerator < 1 || numerator > 32 || !allowedDenominators.includes(denominator)) return null;
   return { numerator, denominator, value: `${numerator}/${denominator}` };
 }
@@ -657,7 +674,7 @@ function updateTempoAnchorUi() {
 }
 
 function showBuildUpDurationError() {
-  tempoMethodStatus.textContent = practiceMode === "single-section"
+  tempoMethodStatus.textContent = usesSinglePracticeTiming()
     ? "Build up requires a total session time of at least 1 minute"
     : "Build up requires at least 60 seconds per PDF";
 }
@@ -669,7 +686,7 @@ function calculateSessionDurations(pdfCount) {
 }
 
 async function prepareSessionDurationPlan() {
-  if (totalSessionSeconds === null || practiceMode === "single-section") {
+  if (totalSessionSeconds === null || usesSinglePracticeTiming()) {
     sessionDurationPlan = [];
     return true;
   }
@@ -689,6 +706,10 @@ async function prepareSessionDurationPlan() {
     showBuildUpDurationError();
     return false;
   }
+  durationInput.value = shortestDuration;
+  durationStatus.textContent = shortestDuration === longestDuration
+    ? `${shortestDuration}s per interval`
+    : `${shortestDuration}–${longestDuration}s per interval`;
   return true;
 }
 
@@ -818,7 +839,7 @@ function startTotalSessionCountdown() {
 function startBuildUp() {
   if (manualTempoOverride) return;
   clearTimeout(rampTimer);
-  const usesSessionClock = practiceMode === "single-section";
+  const usesSessionClock = usesSinglePracticeTiming();
   const durationSeconds = usesSessionClock ? totalSessionSeconds : currentDisplayDurationSeconds;
   const getElapsedMs = usesSessionClock ? getTotalSessionElapsedMs : getSectionElapsedMs;
   if (activeUseAnchorTempos) {
@@ -948,7 +969,10 @@ function applyPracticeSettings(settings, source = "the defaults") {
 }
 
 function updateClickPatternOptions() {
-  const supportsTwo = beatsPerMeasure % 4 === 0;
+  const isSixEight = beatsPerMeasure === 6 && beatDenominator === 8;
+  const supportsTwo = beatsPerMeasure % 4 === 0 || isSixEight;
+  const noteNames = { 2: "half", 4: "quarter", 8: "eighth" };
+  everyBeatLabel.textContent = `Every ${noteNames[beatDenominator]} note`;
   twoClicksOption.disabled = !supportsTwo;
   if (!supportsTwo && clickPattern === "two") {
     clickPattern = "beat";
@@ -1167,14 +1191,14 @@ async function startNewRound() {
     playlist = shuffle(activePdfs);
   }
   playlistIndex = 0;
-  if (totalSessionSeconds !== null && practiceMode !== "single-section") {
+  if (totalSessionSeconds !== null && !usesSinglePracticeTiming()) {
     if (sessionDurationPlan.length !== playlist.length) sessionDurationPlan = calculateSessionDurations(playlist.length);
     playlist = playlist.map((item, index) => ({ ...item, durationSeconds: sessionDurationPlan[index] }));
   }
 }
 
 function getCurrentTempoRemainingMs() {
-  if (practiceMode !== "single-section") return getSectionRemainingMs();
+  if (!usesSinglePracticeTiming()) return getSectionRemainingMs();
   if (activeTempoMethod === "build-up") {
     const durationMs = totalSessionSeconds * 1000;
     const elapsedMs = getTotalSessionElapsedMs();
@@ -1195,14 +1219,14 @@ function startCountdown() {
   const remainingMs = getSectionRemainingMs();
   const endsAt = Date.now() + remainingMs;
   const updateCountdown = () => {
-    const tempoRemainingMs = practiceMode === "single-section"
+    const tempoRemainingMs = usesSinglePracticeTiming()
       ? getCurrentTempoRemainingMs()
       : Math.max(0, endsAt - Date.now());
     const secondsLeft = Math.ceil(tempoRemainingMs / 1000);
     rotationStatus.textContent = "";
     pdfCountdown.textContent = tempoRemainingMs === null
       ? "Section: current tempo · no time limit"
-      : "Section: " + secondsLeft + (practiceMode === "single-section" ? "s at current tempo" : "s left");
+      : "Section: " + secondsLeft + (usesSinglePracticeTiming() ? "s at current tempo" : "s left");
   };
   updateCountdown();
   countdownTimer = setInterval(updateCountdown, 250);
@@ -1214,7 +1238,8 @@ function refreshSinglePdfPractice() {
   // The session-wide Build up continues independently of refresh intervals.
   if (activeTempoMethod !== "build-up") applyTempoForNewPdf();
   startDynamicsPractice();
-  if (selectedSinglePdf) startPracticeHistoryItem(selectedSinglePdf);
+  const currentItem = practiceMode === "single-section" ? selectedSinglePdf : playlist[playlistIndex - 1];
+  if (currentItem) startPracticeHistoryItem(currentItem);
   startCountdown();
 }
 
@@ -1480,12 +1505,16 @@ async function showNextPdf() {
   button.firstChild.textContent = "Loading… ";
   try {
     if (playlistIndex >= playlist.length && playlist.length) {
-      if (practiceMode === "single-section") {
+      if (usesSinglePracticeTiming() && playlist.length === 1) {
         refreshSinglePdfPractice();
         return;
       }
-      await completeRound();
-      return;
+      if (usesSinglePracticeTiming()) {
+        playlistIndex = 0;
+      } else {
+        await completeRound();
+        return;
+      }
     }
     if (playlistIndex >= playlist.length) await startNewRound();
     const result = playlist[playlistIndex];
@@ -1517,14 +1546,14 @@ async function showNextPdf() {
       await renderPage(1);
     }
     resetSectionClock();
-    if (practiceMode !== "single-section") manualTempoOverride = false;
+    if (!usesSinglePracticeTiming()) manualTempoOverride = false;
     applyTempoForNewPdf();
     startDynamicsPractice();
     startPracticeHistoryItem(result);
     pageControls.hidden = result.type === "saved-section";
     fileName.textContent = result.name;
     collectionCount.textContent = "";
-    roundPosition.textContent = practiceMode === "single-section"
+    roundPosition.textContent = usesSinglePracticeTiming() && playlist.length === 1
       ? ""
       : "Round position " + (playlistIndex + 1) + " of " + playlist.length;
     playlistIndex += 1;
@@ -1538,7 +1567,7 @@ async function showNextPdf() {
     rotationStatus.textContent = "Load error: " + detail;
   } finally {
     button.disabled = isStopped;
-    button.firstChild.textContent = practiceMode === "single-section" ? "Refresh now " : "Next now ";
+    button.firstChild.textContent = usesSinglePracticeTiming() ? "Refresh now " : "Next now ";
   }
 }
 
@@ -1557,7 +1586,7 @@ startSessionButton.addEventListener("click", async () => {
     targetTempoInput.focus();
     return;
   }
-  if (methodMayBuildUp() && (practiceMode === "single-section"
+  if (methodMayBuildUp() && (usesSinglePracticeTiming()
     ? totalSessionSeconds === null || totalSessionSeconds < 60
     : totalSessionSeconds === null && displayDurationSeconds < 60)) {
     showBuildUpDurationError();
@@ -1639,14 +1668,14 @@ durationInput.addEventListener("change", () => {
     durationStatus.textContent = "Use a whole number from 1–3,600 seconds";
     return;
   }
-  if (practiceMode !== "single-section" && requestedDuration < 60 && methodMayBuildUp()) {
+  if (!usesSinglePracticeTiming() && requestedDuration < 60 && methodMayBuildUp()) {
     showBuildUpDurationError();
     durationStatus.textContent = "Build up requires at least 60 seconds per PDF";
     return;
   }
   displayDurationSeconds = requestedDuration;
   durationStatus.textContent = `${requestedDuration}s per interval`;
-  if (practiceMode !== "single-section") {
+  if (!usesSinglePracticeTiming()) {
     totalSessionSeconds = null;
     totalSessionInput.value = "";
     sessionDurationPlan = [];
@@ -1667,7 +1696,9 @@ totalSessionInput.addEventListener("change", async () => {
     totalSessionSeconds = null;
     sessionDurationPlan = [];
     durationInput.value = displayDurationSeconds;
-    totalSessionStatus.textContent = practiceMode === "single-section" ? "Optional second timer" : "Using manual duration";
+    durationStatus.textContent = `${displayDurationSeconds}s per interval`;
+    totalSessionStatus.textContent = usesSinglePracticeTiming() ? "Optional second timer" : "Using manual duration";
+    updateDurationControl();
     return;
   }
   const requestedMinutes = Number(totalSessionInput.value);
@@ -1676,19 +1707,19 @@ totalSessionInput.addEventListener("change", async () => {
     return;
   }
   totalSessionSeconds = Math.round(requestedMinutes * 60);
-  if (practiceMode === "single-section") {
+  updateDurationControl();
+  if (usesSinglePracticeTiming()) {
     sessionDurationPlan = [];
     totalSessionStatus.textContent = "Total timer: " + Math.round(totalSessionSeconds / 60) + " minutes";
     return;
   }
   if (!(await prepareSessionDurationPlan())) return;
-  durationInput.value = Math.floor(totalSessionSeconds / (sessionDurationPlan.length || 1));
 });
 practiceModeInput.addEventListener("change", async () => {
   if (sessionStarted) return;
   practiceMode = practiceModeInput.value;
   updatePracticeModeUi();
-  if (practiceMode !== "single-section" && totalSessionSeconds !== null) await prepareSessionDurationPlan();
+  if (!usesSinglePracticeTiming() && totalSessionSeconds !== null) await prepareSessionDurationPlan();
 });
 singlePdfInput.addEventListener("change", () => {
   selectedSinglePdf = savedSections[Number(singlePdfInput.value)] ?? null;
@@ -1744,7 +1775,7 @@ folderInput.addEventListener("change", async () => {
   populateSinglePdfPicker();
   refreshSectionSourceList();
   updatePracticeModeUi();
-  if (totalSessionSeconds !== null && practiceMode !== "single-section") await prepareSessionDurationPlan();
+  if (totalSessionSeconds !== null && !usesSinglePracticeTiming()) await prepareSessionDurationPlan();
 
   if (!selectedFolderPdfs.length) {
     folderStatus.textContent = "No PDFs found — choose another folder";
@@ -1775,7 +1806,7 @@ clickPatternInputs.forEach((input) => {
 function applyTimeSignature() {
   const numerator = Number(beatsPerBarInput.value);
   const denominator = Number(noteValueInput.value);
-  const allowedDenominators = [1, 2, 4, 8, 16];
+  const allowedDenominators = [2, 4, 8];
   if (!Number.isInteger(numerator) || numerator < 1 || numerator > 32 || !allowedDenominators.includes(denominator)) {
     timeSignatureStatus.textContent = "Use 1–32 / 1, 2, 4, 8, or 16";
     return;
@@ -1813,9 +1844,9 @@ targetTempoInput.addEventListener("change", () => {
 tempoMethodInput.addEventListener("change", () => {
   if (!isTempoMethod(tempoMethodInput.value)) return;
   tempoMethod = tempoMethodInput.value;
-  updateDurationControl();
+  updatePracticeModeUi();
   updateTempoAnchorUi();
-  if (methodMayBuildUp() && (practiceMode === "single-section"
+  if (methodMayBuildUp() && (usesSinglePracticeTiming()
     ? totalSessionSeconds === null || totalSessionSeconds < 60
     : totalSessionSeconds === null && displayDurationSeconds < 60)) {
     showBuildUpDurationError();
@@ -1827,6 +1858,7 @@ tempoMethodInput.addEventListener("change", () => {
 });
 tempoAnchorInput.addEventListener("change", () => {
   useAnchorTempos = tempoAnchorInput.checked;
+  updateDurationControl();
   tempoMethodStatus.textContent = useAnchorTempos && !hasValidAnchorTempos()
     ? "Target tempo must be within the BPM range when using min, target, and max only"
     : `Next session: ${getTempoMethodDescription(tempoMethod, useAnchorTempos)}`;
