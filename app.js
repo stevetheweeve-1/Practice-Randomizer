@@ -47,6 +47,7 @@ const singlePdfInput = document.querySelector("#single-pdf-input");
 const singlePdfStatus = document.querySelector("#single-pdf-status");
 const clickPatternInputs = document.querySelectorAll('input[name="click-pattern"]');
 const twoClicksOption = document.querySelector("#two-clicks-option");
+const everyBeatLabel = document.querySelector("#every-beat-label");
 const beatsPerBarInput = document.querySelector("#beats-per-bar-input");
 const noteValueInput = document.querySelector("#note-value-input");
 const timeSignatureStatus = document.querySelector("#time-signature-status");
@@ -615,7 +616,7 @@ function parseTimeSignature(value) {
   const match = typeof value === "string" && value.trim().match(/^(\d+)\/(\d+)$/);
   const numerator = match && Number(match[1]);
   const denominator = match && Number(match[2]);
-  const allowedDenominators = [1, 2, 4, 8, 16];
+  const allowedDenominators = [2, 4, 8];
   if (!Number.isInteger(numerator) || numerator < 1 || numerator > 32 || !allowedDenominators.includes(denominator)) return null;
   return { numerator, denominator, value: `${numerator}/${denominator}` };
 }
@@ -948,7 +949,10 @@ function applyPracticeSettings(settings, source = "the defaults") {
 }
 
 function updateClickPatternOptions() {
-  const supportsTwo = beatsPerMeasure % 4 === 0;
+  const isSixEight = beatsPerMeasure === 6 && beatDenominator === 8;
+  const supportsTwo = beatsPerMeasure % 4 === 0 || isSixEight;
+  const noteNames = { 2: "half", 4: "quarter", 8: "eighth" };
+  everyBeatLabel.textContent = `Every ${noteNames[beatDenominator]} note`;
   twoClicksOption.disabled = !supportsTwo;
   if (!supportsTwo && clickPattern === "two") {
     clickPattern = "beat";
@@ -1775,7 +1779,7 @@ clickPatternInputs.forEach((input) => {
 function applyTimeSignature() {
   const numerator = Number(beatsPerBarInput.value);
   const denominator = Number(noteValueInput.value);
-  const allowedDenominators = [1, 2, 4, 8, 16];
+  const allowedDenominators = [2, 4, 8];
   if (!Number.isInteger(numerator) || numerator < 1 || numerator > 32 || !allowedDenominators.includes(denominator)) {
     timeSignatureStatus.textContent = "Use 1–32 / 1, 2, 4, 8, or 16";
     return;

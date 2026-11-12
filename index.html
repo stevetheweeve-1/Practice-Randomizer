@@ -18,9 +18,9 @@
           <label class="accent-control"><input id="accent-toggle" type="checkbox" /> Accent first beat</label>
           <fieldset class="click-pattern-control">
             <legend>Metronome clicks</legend>
-            <label><input type="radio" name="click-pattern" value="beat" checked /> Every beat</label>
-            <label><input type="radio" name="click-pattern" value="bar" /> One click per bar</label>
-            <label><input id="two-clicks-option" type="radio" name="click-pattern" value="two" /> Two clicks per bar</label>
+            <label><input type="radio" name="click-pattern" value="beat" checked /> <span id="every-beat-label">Every quarter note</span></label>
+            <label><input type="radio" name="click-pattern" value="bar" /> One click per measure</label>
+            <label><input id="two-clicks-option" type="radio" name="click-pattern" value="two" /> Two clicks per measure</label>
           </fieldset>
           <button id="stop-button" class="stop-button" type="button" disabled>Stop session</button>
           <button id="end-session-button" class="end-session-button" type="button" hidden>End session</button>
@@ -174,11 +174,9 @@
           <label for="beats-per-bar-input">Time signature</label>
           <input id="beats-per-bar-input" type="number" min="1" max="32" step="1" value="4" inputmode="numeric" aria-label="Beats per bar" required />
           <select id="note-value-input" aria-label="Note value">
-            <option value="1">1</option>
             <option value="2">2</option>
             <option value="4" selected>4</option>
             <option value="8">8</option>
-            <option value="16">16</option>
           </select>
           <span id="time-signature-status" aria-live="polite">4/4</span>
         </div>
@@ -247,6 +245,6 @@
         </div>
       </section>
     </main>
-    <script type="module" src="app.js?v=gui-polish-3"></script>
+    <script type="module" src="app.js?v=six-eight-3"></script>
   </body>
 </html>
