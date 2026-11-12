@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Practice App</title>
-    <link rel="stylesheet" href="style.css?v=practice-history-layout-3" />
+    <link rel="stylesheet" href="style.css?v=gui-polish-4" />
   </head>
   <body data-view="setup">
     <main>
@@ -22,7 +22,6 @@
             <label><input type="radio" name="click-pattern" value="bar" /> One click per bar</label>
             <label><input id="two-clicks-option" type="radio" name="click-pattern" value="two" /> Two clicks per bar</label>
           </fieldset>
-          <button id="start-session-button" class="start-session-button" type="button">Start session</button>
           <button id="stop-button" class="stop-button" type="button" disabled>Stop session</button>
           <button id="end-session-button" class="end-session-button" type="button" hidden>End session</button>
         </div>
@@ -80,10 +79,13 @@
         <p>Choose your score and practice settings. <a class="readme-link" href="https://github.com/stevetheweeve-1/Practice-Randomizer/blob/main/README.md" target="_blank" rel="noopener noreferrer">Help / README<span class="readme-new-tab"> (opens in a new tab)</span></a></p>
       </div>
       <section class="options-panel">
-        <div class="folder-picker">
-          <input id="folder-input" type="file" accept="application/pdf,.pdf,application/json,.json" webkitdirectory multiple hidden />
-          <button id="folder-button" type="button">Choose folder</button>
-          <span id="folder-status">Choose the folder containing the score</span>
+        <div class="setup-panel-top-row">
+          <div class="folder-picker">
+            <input id="folder-input" type="file" accept="application/pdf,.pdf,application/json,.json" webkitdirectory multiple hidden />
+            <button id="folder-button" type="button">Choose folder</button>
+            <span id="folder-status">Choose the folder containing the score</span>
+          </div>
+          <button id="start-session-button" class="start-session-button" type="button">Start session</button>
         </div>
         <div class="practice-mode-control">
           <label for="practice-mode-input">Practice mode</label>
@@ -245,6 +247,6 @@
         </div>
       </section>
     </main>
-    <script type="module" src="app.js?v=practice-history-layout-2"></script>
+    <script type="module" src="app.js?v=gui-polish-3"></script>
   </body>
 </html>
