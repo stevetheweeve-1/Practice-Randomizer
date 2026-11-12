@@ -55,6 +55,7 @@ const minBpmInput = document.querySelector("#min-bpm-input");
 const maxBpmInput = document.querySelector("#max-bpm-input");
 const tempoRangeStatus = document.querySelector("#tempo-range-status");
 const targetTempoInput = document.querySelector("#target-tempo-input");
+const previewTargetTempoButton = document.querySelector("#preview-target-tempo");
 const targetTempoStatus = document.querySelector("#target-tempo-status");
 const tempoMethodInput = document.querySelector("#tempo-method-input");
 const tempoMethodStatus = document.querySelector("#tempo-method-status");
@@ -110,6 +111,7 @@ let audioContext;
 let metronomeGain;
 let metronomeVolume = volumeToGain(Number(metronomeVolumeInput.value));
 let visualMetronomeTimer = null;
+let targetPreviewActive = false;
 let currentBpm = 60;
 let manualTempoOverride = false;
 const liveTempoControl = document.querySelector("#live-tempo-control");
@@ -946,6 +948,7 @@ function applyPracticeSettings(settings, source = "the defaults") {
     targetTempo = defaultPracticeSettings.targetTempo;
     targetTempoInput.value = targetTempo;
     targetTempoStatus.textContent = `Default target: ${targetTempo} BPM`;
+    if (targetPreviewActive) { currentBpm = targetTempo; startVisualMetronome(); }
     return false;
   }
 
@@ -965,6 +968,7 @@ function applyPracticeSettings(settings, source = "the defaults") {
   noteValueInput.value = beatDenominator;
   tempoRangeStatus.textContent = `${minimum}–${maximum} BPM from ${source}`;
   timeSignatureStatus.textContent = timeSignature.value;
+  if (targetPreviewActive) { currentBpm = targetTempo; startVisualMetronome(); }
   return true;
 }
 
@@ -1044,6 +1048,35 @@ function startVisualMetronome() {
   visualMetronomeTimer = setInterval(tick, (60000 / currentBpm) * (4 / beatDenominator) * getBeatsPerClick());
   updateLiveTempoUi();
 }
+
+function stopTargetPreview() {
+  if (!targetPreviewActive) return;
+  targetPreviewActive = false;
+  clearInterval(visualMetronomeTimer);
+  visualMetronomeTimer = null;
+  previewTargetTempoButton.textContent = "Preview target tempo";
+  previewTargetTempoButton.setAttribute("aria-pressed", "false");
+}
+
+previewTargetTempoButton.addEventListener("click", async () => {
+  if (targetPreviewActive) {
+    stopTargetPreview();
+    return;
+  }
+  const requestedTarget = Number(targetTempoInput.value);
+  if (!Number.isInteger(requestedTarget) || requestedTarget < 1 || requestedTarget > 300) {
+    targetTempoStatus.textContent = "Use a whole number from 1–300";
+    targetTempoInput.focus();
+    return;
+  }
+  targetTempo = requestedTarget;
+  await enableMetronome();
+  targetPreviewActive = true;
+  currentBpm = targetTempo;
+  previewTargetTempoButton.textContent = "Stop preview";
+  previewTargetTempoButton.setAttribute("aria-pressed", "true");
+  startVisualMetronome();
+});
 
 async function showFullScoreAtSessionEnd() {
   const fullScore = selectedFolderPdfs[0];
@@ -1592,6 +1625,7 @@ startSessionButton.addEventListener("click", async () => {
     showBuildUpDurationError();
     return;
   }
+  stopTargetPreview();
   sessionStarted = true;
   isStopped = false;
   beginPracticeHistorySession();
@@ -1815,7 +1849,7 @@ function applyTimeSignature() {
   beatDenominator = denominator;
   updateClickPatternOptions();
   timeSignatureStatus.textContent = `${numerator}/${denominator}`;
-  if (!isStopped) startVisualMetronome();
+  if (!isStopped || targetPreviewActive) startVisualMetronome();
 }
 beatsPerBarInput.addEventListener("change", applyTimeSignature);
 noteValueInput.addEventListener("change", applyTimeSignature);
@@ -1840,6 +1874,10 @@ targetTempoInput.addEventListener("change", () => {
   }
   targetTempo = requestedTarget;
   targetTempoStatus.textContent = `Target: ${targetTempo} BPM`;
+  if (targetPreviewActive) {
+    currentBpm = targetTempo;
+    startVisualMetronome();
+  }
 });
 tempoMethodInput.addEventListener("change", () => {
   if (!isTempoMethod(tempoMethodInput.value)) return;
